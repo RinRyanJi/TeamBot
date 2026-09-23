@@ -1,0 +1,8 @@
+# continuity & recovery (thread/resume persistence + boot recovery)
+ok 1 - resident threadId persists across restart -> planResume=resume
+ok 2 - fresh store -> planResume=start
+ok 3 - markInFlightInterrupted marks in-flight jobs interrupted (terminal untouched)
+ok 4 - bootRecovery aggregates resume plan, interrupted jobs, pending outbox + approvals
+# tests 4
+# pass 4
+# fail 0

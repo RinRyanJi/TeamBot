@@ -32,7 +32,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task023 | 2 | local | [Live status model + coalescer wiring (roadmap C)](task023-status-coalescer-live/README.md) | DONE |
 | task024 | 2 | local | [Approval registry: code<->requestId, timeouts, steer (roadmap D)](task024-approval-registry/README.md) | DONE |
 | task025 | 3 | local | [Event-driven Teams inbox via MutationObserver (roadmap E)](task025-event-driven-inbox/README.md) | pending |
-| task026 | 3 | local | [Continuity & recovery via thread/resume (roadmap F)](task026-resume-recovery/README.md) | pending |
+| task026 | 3 | local | [Continuity & recovery via thread/resume (roadmap F)](task026-resume-recovery/README.md) | DONE |
 | task027 | post | local | [Optional multi-task via additional threads + git worktrees (roadmap G)](task027-multitask-worktrees/README.md) | pending |
 
 See [manifest.json](manifest.json) for the machine-readable source and [scaffold.mjs](scaffold.mjs) for the generator.

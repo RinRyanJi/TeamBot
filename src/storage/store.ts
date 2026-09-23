@@ -399,6 +399,42 @@ export class Store {
       .run(status, sentAt ?? null, id);
   }
 
+  // --- session key/value (resident thread id, etc.) ---
+  setSession(key: string, value: string, at: number): void {
+    this.db
+      .prepare(
+        "INSERT INTO session (key,value,at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, at=excluded.at",
+      )
+      .run(key, value, at);
+  }
+
+  getSession(key: string): string | undefined {
+    const row = this.db.prepare("SELECT value FROM session WHERE key=?").get(key) as
+      | { value: string }
+      | undefined;
+    return row?.value;
+  }
+
+  listPendingApprovals(): Approval[] {
+    const rows = this.db
+      .prepare("SELECT * FROM approvals WHERE status='pending' ORDER BY createdAt")
+      .all() as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      code: r.code as string,
+      jobId: r.jobId as string,
+      requestId: r.requestId as string,
+      threadId: (r.threadId as string | null) ?? null,
+      turnId: (r.turnId as string | null) ?? null,
+      scope: (r.scope as string | null) ?? null,
+      userId: r.userId as string,
+      chatId: r.chatId as string,
+      status: r.status as Approval["status"],
+      createdAt: r.createdAt as number,
+      expiresAt: r.expiresAt as number,
+      usedAt: (r.usedAt as number | null) ?? null,
+    }));
+  }
+
   // --- result idempotency (one authoritative result per turn) ---
   /** Record a turn's result as sent. Returns true if newly recorded (i.e. not a duplicate). */
   markResultSent(turnId: string, chatId: string, at: number, teamsMessageId?: string): boolean {

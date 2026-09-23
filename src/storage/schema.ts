@@ -82,6 +82,12 @@ CREATE TABLE IF NOT EXISTS outbox (
   sentAt        INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS session (
+  key           TEXT PRIMARY KEY,           -- e.g. residentThreadId
+  value         TEXT NOT NULL,
+  at            INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sent_results (
   turnId        TEXT PRIMARY KEY,           -- one authoritative result per turn (idempotent)
   chatId        TEXT NOT NULL,
