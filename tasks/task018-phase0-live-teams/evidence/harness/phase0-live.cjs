@@ -25,6 +25,7 @@ const SELFCHECK = process.argv.includes("--selfcheck");
 const LOGIN = process.argv.includes("--login");
 const PROBE = process.argv.includes("--probe");
 const DIAG = process.argv.includes("--diag");
+const SENDTEST = process.argv.includes("--sendtest");
 const TEAMS_URL = "https://teams.microsoft.com/";
 // Teams web refuses unrecognized browsers ("classic Teams no longer available"). Present
 // a supported desktop Edge/Chrome User-Agent so the real web app loads and lets us log in.
@@ -121,6 +122,52 @@ const DIAG_JS = `(() => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Reports the currently-open conversation so you can confirm the target before sending.
+const OPEN_JS = `(() => {
+  const t = document.querySelector('[data-track-thread-id]');
+  const box = document.querySelector('[contenteditable="true"][role="textbox"]') || document.querySelector('div[contenteditable="true"]');
+  return { threadId: t ? t.getAttribute('data-track-thread-id') : null, title: document.title, hasCompose: !!box };
+})()`;
+
+// Sends a clearly-marked test message into the CURRENTLY-OPEN conversation, then
+// reconciles it by finding the [data-mid] whose text contains the marker.
+async function doSendTest(wc, outDir, fs) {
+  const marker = "[TB TEST] Phase0 send-path check - please ignore (" + Date.now() + ")";
+  const focused = await wc.executeJavaScript(
+    `(() => { const b = document.querySelector('[contenteditable="true"][role="textbox"]') || document.querySelector('div[contenteditable="true"]'); if (!b) return false; b.focus(); return true; })()`,
+  );
+  if (!focused) {
+    console.log("SENDTEST_RESULT " + JSON.stringify({ ok: false, reason: "no-compose-box" }));
+    app.exit(2);
+    return;
+  }
+  wc.insertText(marker);
+  await sleep(600);
+  wc.sendInputEvent({ type: "keyDown", keyCode: "Return" });
+  wc.sendInputEvent({ type: "char", keyCode: "\r" });
+  wc.sendInputEvent({ type: "keyUp", keyCode: "Return" });
+  await sleep(4000);
+  const rec = await wc.executeJavaScript(
+    `(() => {
+      const els = Array.from(document.querySelectorAll('[data-mid]'));
+      const hit = els.find((e) => (e.textContent || '').includes(${JSON.stringify(marker)}));
+      const t = document.querySelector('[data-track-thread-id]');
+      let senderId = null;
+      if (hit) { const a = hit.querySelector('[data-acc-id]') || hit.closest('[data-acc-id]'); senderId = a ? a.getAttribute('data-acc-id') : null; }
+      return { found: !!hit, messageId: hit ? hit.getAttribute('data-mid') : null, senderId, threadId: t ? t.getAttribute('data-track-thread-id') : null };
+    })()`,
+  );
+  fs.writeFileSync(
+    path.join(outDir, "sendtest-result.json"),
+    JSON.stringify({ marker, ...rec }, null, 2),
+  );
+  console.log(
+    "SENDTEST_RESULT " +
+      JSON.stringify({ ok: rec.found, reconciled: rec.found, hasMessageId: !!rec.messageId, hasSenderId: !!rec.senderId, hasThreadId: !!rec.threadId }),
+  );
+  app.exit(rec.found ? 0 : 2);
+}
+
 // Teams' new web app renders its content in child iframes; run JS in every frame.
 async function runInAllFrames(wc, js) {
   const out = [];
@@ -179,6 +226,38 @@ app.whenReady().then(async () => {
     // Interactive one-time login. Leave the window open; the persistent partition
     // saves the session. Log in, open your test self-chat + a group, then close.
     console.log("PHASE0_LOGIN ready — log in, open your test conversations, then close the window.");
+    return;
+  }
+
+  if (SENDTEST) {
+    // Visible: YOU navigate to the conversation you want to test. The harness reports
+    // the currently-open chat every 3s, and only sends when a trigger file appears
+    // (results/SEND_NOW), so the target is whatever YOU have open at that moment.
+    const fs = require("fs");
+    const outDir = path.join(__dirname, "results");
+    fs.mkdirSync(outDir, { recursive: true });
+    const triggerFile = path.join(outDir, "SEND_NOW");
+    try { fs.rmSync(triggerFile, { force: true }); } catch (e) {}
+    console.log("SENDTEST ready — open the target conversation. Waiting for trigger file: " + triggerFile);
+    let busy = false;
+    const timer = setInterval(async () => {
+      if (busy) return;
+      try {
+        const info = await view.webContents.executeJavaScript(OPEN_JS);
+        console.log(
+          "OPEN_CHAT " +
+            JSON.stringify({ title: info.title, threadIdPrefix: info.threadId ? info.threadId.slice(0, 14) + "…" : "none", hasCompose: info.hasCompose }),
+        );
+        if (fs.existsSync(triggerFile)) {
+          busy = true;
+          clearInterval(timer);
+          fs.rmSync(triggerFile, { force: true });
+          await doSendTest(view.webContents, outDir, fs);
+        }
+      } catch (e) {
+        /* navigating */
+      }
+    }, 3000);
     return;
   }
 

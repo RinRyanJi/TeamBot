@@ -16,6 +16,9 @@ they exist only in the local gitignored `results/phase0-results.json`.
 | Stable **senderId** obtainable | ✅ YES | `[data-acc-id]` on/within each message. |
 | Chat list enumeration | ✅ (rail present) | Left rail chats are `role=treeitem` (31 seen); folders `UNREAD / TEAMS_AND_CHANNELS / NON_MEETING_CHATS`. |
 | Not display-name-only | ✅ | IDs are opaque stable values, not display names. |
+| **Reply / send path** | ✅ YES | With user consent, `--sendtest` typed into the compose box and sent (Enter) a marked message into the self-chat, then **reconciled it by `data-mid`** (got messageId + senderId + threadId). |
+
+Thread id formats observed: self-chat = `48:notes…`; group = `19:…` (standard Teams thread prefixes).
 
 ## Real Teams v2 selector map (used by the harness probe)
 
@@ -26,12 +29,12 @@ they exist only in the local gitignored `results/phase0-results.json`.
 | senderId / author | `[data-acc-id]` |
 | message container | `data-tid="chat-pane-message"` / `chat-pane-item` |
 | chat list item | `role=treeitem` |
+| compose box | `[contenteditable="true"][role="textbox"]` (send via Enter; `insertText` + synthesized Return) |
 | content frame | single top frame (`teams.cloud.microsoft`); harness still probes all frames for safety |
 
 ## Still pending (user / follow-up)
 
 - Self-chat + one group **bound simultaneously** (dual-surface); background updates while hidden.
-- Reply targeting into a specific conversation (send path on real DOM).
 - Same-account **phone push** behavior (needs the phone).
 
 ## Phase-0 decision (partial)
