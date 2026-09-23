@@ -1,0 +1,26 @@
+# cmd: node --test tests/router.test.ts
+TAP version 13
+# Subtest: unauthorized (non-allowlisted) member cannot start work
+ok 1 - unauthorized (non-allowlisted) member cannot start work
+# Subtest: allowlisted member can start an authorized project
+ok 2 - allowlisted member can start an authorized project
+# Subtest: unregistered project does not start Codex
+ok 3 - unregistered project does not start Codex
+# Subtest: querying a job that belongs to another conversation is refused
+ok 4 - querying a job that belongs to another conversation is refused
+# Subtest: same conversation query is allowed for any allowlisted member
+ok 5 - same conversation query is allowed for any allowlisted member
+# Subtest: only initiator or admin may stop/continue/steer
+ok 6 - only initiator or admin may stop/continue/steer
+# Subtest: acting on an unknown job is refused
+ok 7 - acting on an unknown job is refused
+# Subtest: display-name spoof cannot gain permission (identity is sender id)
+ok 8 - display-name spoof cannot gain permission (identity is sender id)
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

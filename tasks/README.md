@@ -12,7 +12,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task003 | 1 | local | [SQLite storage layer (inbox, outbox, jobs, approvals) with migrations](task003-storage-layer/README.md) | DONE |
 | task004 | 1 | local | [Inbox dedup and pairing baseline](task004-inbox-dedup/README.md) | DONE |
 | task005 | 1 | local | [!tb command parser and ID naming (T/A/Q)](task005-command-parser/README.md) | DONE |
-| task006 | 1 | local | [Router: identity check, allowlist, per-conversation binding, permission table](task006-router-authz/README.md) | pending |
+| task006 | 1 | local | [Router: identity check, allowlist, per-conversation binding, permission table](task006-router-authz/README.md) | DONE |
 | task007 | 0/1 | local | [Codex app-server stdio adapter (initialize/thread/turn/steer/interrupt)](task007-codex-adapter/README.md) | pending |
 | task008 | 2 | local | [Supervisor: job state machine, single active turn, queue, project lock](task008-supervisor-statemachine/README.md) | pending |
 | task009 | 2 | local | [Progress coalescing and transactional outbox](task009-progress-outbox/README.md) | pending |
