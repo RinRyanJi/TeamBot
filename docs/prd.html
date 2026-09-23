@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TeamBot PRD v2 — 視覺版</title>
+<title>TeamBot PRD v3 — 以「怎麼用才方便」重寫</title>
 <style>
   :root{
     --bg:#0d1117; --card:#161b22; --line:#30363d; --ink:#e6edf3; --dim:#9da7b3;
@@ -11,15 +11,17 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Segoe UI",system-ui,"Microsoft JhengHei",sans-serif;line-height:1.6}
-  .wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+    font-family:"Segoe UI",system-ui,"Microsoft JhengHei",sans-serif;line-height:1.65}
+  .wrap{max-width:1020px;margin:0 auto;padding:32px 20px 80px}
   h1{font-size:30px;margin:0 0 4px}
-  h2{font-size:20px;margin:34px 0 12px;border-left:4px solid var(--accent);padding-left:10px}
+  h2{font-size:20px;margin:38px 0 12px;border-left:4px solid var(--accent);padding-left:10px}
+  h3{font-size:15px;color:var(--accent2);margin:22px 0 6px}
   .sub{color:var(--dim);margin:0 0 18px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-  .card h3{margin:0 0 8px;font-size:15px;color:var(--accent2)}
-  .card p,.card li{color:var(--dim);font-size:14px;margin:4px 0}
+  .card h4{margin:0 0 8px;font-size:14.5px;color:var(--accent2)}
+  .card p,.card li{color:var(--dim);font-size:13.5px;margin:4px 0}
   table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
   th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
   th{background:#1c2330;color:var(--ink)}
@@ -27,249 +29,269 @@
   .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
   .done{background:rgba(63,185,80,.15);color:var(--ok)}
   .plan{background:rgba(210,153,34,.15);color:var(--warn)}
-  code{background:#1c2330;padding:1px 6px;border-radius:5px;color:#e6edf3;font-size:13px}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:13px;margin:6px 0 0}
-  .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:5px}
+  .p0{background:rgba(248,81,73,.15);color:var(--danger)}
+  code{background:#1c2330;padding:1px 6px;border-radius:5px;color:#e6edf3;font-size:12.8px}
   svg{width:100%;height:auto;display:block;background:#0b0f14;border:1px solid var(--line);border-radius:12px}
-  .foot{color:var(--dim);font-size:12.5px;margin-top:30px;border-top:1px solid var(--line);padding-top:14px}
+  .callout{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.35);
+    border-radius:12px;padding:16px;margin:14px 0}
+  .callout h4{margin:0 0 8px;color:var(--danger);font-size:15px}
+  .callout p{color:var(--dim);font-size:13.5px;margin:6px 0}
+  .quiet{color:var(--ok);font-weight:600}
+  .loud{color:var(--danger);font-weight:600}
+  .foot{color:var(--dim);font-size:12.5px;margin-top:34px;border-top:1px solid var(--line);padding-top:14px}
+  ul{margin:6px 0;padding-left:20px}
+  li{color:var(--dim);font-size:13.5px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🤖 TeamBot — 產品需求 (PRD v2)</h1>
-  <p class="sub">用手機 Microsoft Teams 遠端操作電腦上的<strong>常駐 Codex CLI</strong>:交辦、看進度、做決策、取回結果。借鏡開源 <code>telecodex</code>(Telegram↔Codex)。2026-09-24</p>
+  <h1>🤖 TeamBot — PRD v3</h1>
+  <p class="sub">以「<strong>怎麼用才方便</strong>」重寫。v2 是功能表;v3 從<strong>使用時刻</strong>往回推,砍掉了功能、也改了安全模型。2026-09-24</p>
 
   <div class="grid">
-    <div class="card"><h3>核心價值</h3>
-      <p>離開電腦也能用手機交辦與監控本機 Codex;常駐工作階段保留對話上下文,危險操作需你批准。</p></div>
-    <div class="card"><h3>資料區</h3>
-      <p><code>D:\AgentHub</code> 為個人助理工作區(projects / data / logs);寫入預設限縮於此。</p></div>
+    <div class="card"><h4>轉向 ① 推播經濟學成為骨架</h4>
+      <p>「什麼時候可以吵你」不是細節,它決定這產品在手機上活不活得下去。進度用<strong>編輯</strong>(安靜),要你做事才用<strong>新訊息</strong>(響)。</p></div>
+    <div class="card"><h4>轉向 ② 安全從「問你」改成「硬牆 + 名單」</h4>
+      <p>路徑越界<strong>直接拒</strong>、危險指令<strong>直接拒</strong>、日常指令<strong>直接跑</strong>,只有灰區才問。<strong>批准疲勞本身就是安全漏洞</strong>——問太多次,人就閉著眼按 ok。</p></div>
+  </div>
+  <p class="sub" style="margin-top:12px"><strong>刪掉的東西</strong>:<code>run &lt;專案&gt;</code>、<code>sessions</code>、<code>use latest</code>、<code>new</code>;多會話 / 歷史匯入 / ACL 角色 / 設定檔驅動全部降級。理由一致:<strong>選項愈多愈不方便</strong>。</p>
+
+  <div class="callout">
+    <h4>⚠️ §0 整份設計壓在一個尚未驗證的假設上(P0)</h4>
+    <p><strong>「Teams 中編輯既有訊息不會發手機推播,新訊息會。」</strong></p>
+    <p>成立 → 每輪推播可壓到常態 1 次。不成立 → 「持續回報」和「不吵你」直接衝突,必須改成只能 <code>!tb status</code> 拉取,<strong>推翻下面 §3.2 與 §5 的全部設計</strong>。</p>
+    <p><strong>驗證方法</strong>:發一則訊息 → 手機確認推播;同一則連續編輯 3 次 → 觀察是否再推播。<strong>驗證前 §3.2 不該開工。</strong></p>
   </div>
 
-  <h2>系統架構</h2>
-  <div class="legend">
-    <span><span class="swatch" style="background:#26a5e4"></span>Teams / 傳輸</span>
-    <span><span class="swatch" style="background:#ea580c"></span>TeamBot 服務</span>
-    <span><span class="swatch" style="background:#3fb950"></span>Codex / 檔案</span>
-    <span><span class="swatch" style="background:#f85149"></span>安全關卡</span>
-  </div>
-  <svg viewBox="0 0 960 470" role="img" aria-label="TeamBot architecture">
+  <h2>一個具體的下午(這就是全部目的)</h2>
+  <svg viewBox="0 0 940 300" role="img" aria-label="一個下午的使用時間軸">
     <defs>
-      <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-        <path d="M0,0 L8,3 L0,6 Z" fill="#8b949e"/>
-      </marker>
       <style>
-        .b{rx:12;ry:12;stroke-width:1.5}
-        .t{fill:#e6edf3;font:600 15px "Segoe UI",sans-serif}
-        .s{fill:#9da7b3;font:12px "Segoe UI",sans-serif}
-        .lbl{fill:#8b949e;font:italic 12px "Segoe UI",sans-serif}
-        .flow{stroke:#8b949e;stroke-width:1.6;fill:none;marker-end:url(#arr)}
-      </style>
-    </defs>
-
-    <!-- phone -->
-    <rect class="b" x="360" y="16" width="240" height="46" fill="#0b2b3a" stroke="#26a5e4"/>
-    <text class="t" x="480" y="38" text-anchor="middle">📱 手機 Microsoft Teams</text>
-    <text class="s" x="480" y="54" text-anchor="middle">!tb / @tb 指令 · 收進度與結果</text>
-
-    <!-- cloud -->
-    <rect class="b" x="360" y="86" width="240" height="40" fill="#0b2b3a" stroke="#26a5e4"/>
-    <text class="t" x="480" y="111" text-anchor="middle">☁️ Teams 雲端</text>
-
-    <!-- electron surface -->
-    <rect class="b" x="320" y="150" width="320" height="52" fill="#0b2b3a" stroke="#26a5e4"/>
-    <text class="t" x="480" y="172" text-anchor="middle">🖥️ Electron 自有 Teams 表面</text>
-    <text class="s" x="480" y="189" text-anchor="middle">隔離 WebContentsView · 無 Node · 持久登入</text>
-
-    <!-- teambot service -->
-    <rect class="b" x="150" y="226" width="660" height="96" fill="#2b1608" stroke="#ea580c"/>
-    <text class="t" x="480" y="248" text-anchor="middle">⚙️ TeamBot 常駐服務</text>
-    <rect class="b" x="168" y="260" width="150" height="48" fill="#1c1206" stroke="#7a3d10"/>
-    <text class="s" x="243" y="280" text-anchor="middle">收件 / Router</text>
-    <text class="s" x="243" y="296" text-anchor="middle">授權 · 去重 · parser</text>
-    <rect class="b" x="330" y="260" width="150" height="48" fill="#1c1206" stroke="#7a3d10"/>
-    <text class="s" x="405" y="280" text-anchor="middle">Supervisor</text>
-    <text class="s" x="405" y="296" text-anchor="middle">狀態機 · 佇列 · 批准</text>
-    <rect class="b" x="492" y="260" width="150" height="48" fill="#1c1206" stroke="#7a3d10"/>
-    <text class="s" x="567" y="280" text-anchor="middle">Progress</text>
-    <text class="s" x="567" y="296" text-anchor="middle">狀態卡 · 結果彙整</text>
-    <rect class="b" x="654" y="260" width="140" height="48" fill="#2a0d0d" stroke="#f85149"/>
-    <text class="s" x="724" y="280" text-anchor="middle" fill="#f0a0a0">Security</text>
-    <text class="s" x="724" y="296" text-anchor="middle" fill="#f0a0a0">姿態·白名單·去識別</text>
-
-    <!-- codex -->
-    <rect class="b" x="300" y="346" width="360" height="52" fill="#0c2417" stroke="#3fb950"/>
-    <text class="t" x="480" y="368" text-anchor="middle">🧠 常駐 Codex 工作階段 @ D:\AgentHub</text>
-    <text class="s" x="480" y="385" text-anchor="middle">app-server(stdio) · thread/resume 連續 · sandboxPolicy</text>
-
-    <!-- files -->
-    <rect class="b" x="340" y="418" width="280" height="40" fill="#0c2417" stroke="#3fb950"/>
-    <text class="t" x="480" y="443" text-anchor="middle">📁 專案檔案 / 指令(沙箱+批准)</text>
-
-    <!-- flows -->
-    <path class="flow" d="M480,62 L480,84"/>
-    <path class="flow" d="M480,126 L480,148"/>
-    <path class="flow" d="M480,202 L480,224"/>
-    <path class="flow" d="M480,322 L480,344"/>
-    <path class="flow" d="M480,398 L480,416"/>
-    <text class="lbl" x="500" y="218" text-anchor="start">CDP(loopback)</text>
-    <text class="lbl" x="500" y="340" text-anchor="start">stdio app-server</text>
-  </svg>
-  <p class="sub" style="margin-top:8px">電腦主動連出;手機不直接連入電腦。與 telecodex 差異:Telegram 有官方 Bot API,Teams 走 CDP 自有表面(有條款風險,長期評估 Graph/Bot Framework)。</p>
-
-  <h2>一次互動流程(含決策關卡)</h2>
-  <svg viewBox="0 0 960 380" role="img" aria-label="interaction sequence">
-    <defs>
-      <marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8b949e"/></marker>
-      <style>
-        .lane{fill:#9da7b3;font:600 13px "Segoe UI",sans-serif}
-        .msg{fill:#c9d1d9;font:12.5px "Segoe UI",sans-serif}
-        .ln{stroke:#30363d;stroke-width:1.2;stroke-dasharray:4 4}
-        .m{stroke:#8b949e;stroke-width:1.5;marker-end:url(#a2)}
-        .mok{stroke:#3fb950}
-        .mwarn{stroke:#d29922}
-      </style>
-    </defs>
-    <!-- lanes -->
-    <text class="lane" x="120" y="26" text-anchor="middle">📱 手機</text>
-    <text class="lane" x="480" y="26" text-anchor="middle">⚙️ TeamBot</text>
-    <text class="lane" x="840" y="26" text-anchor="middle">🧠 Codex@AgentHub</text>
-    <line class="ln" x1="120" y1="36" x2="120" y2="360"/>
-    <line class="ln" x1="480" y1="36" x2="480" y2="360"/>
-    <line class="ln" x1="840" y1="36" x2="840" y2="360"/>
-
-    <line class="m" x1="120" y1="64" x2="476" y2="64"/><text class="msg" x="128" y="58">!tb 修好登入並跑測試</text>
-    <line class="m mok" x1="480" y1="98" x2="124" y2="98"/><text class="msg" x="180" y="92" text-anchor="start">[TB T1] 已接收(read-only)</text>
-    <line class="m" x1="480" y1="132" x2="836" y2="132"/><text class="msg" x="836" y="126" text-anchor="end">turn/start</text>
-    <line class="m mwarn" x1="840" y1="166" x2="484" y2="166"/><text class="msg" x="836" y="160" text-anchor="end">requestApproval</text>
-    <line class="m mwarn" x1="480" y1="200" x2="124" y2="200"/><text class="msg" x="180" y="194" text-anchor="start">[TB T1] 需要批准 A1:git push…</text>
-    <line class="m" x1="120" y1="234" x2="476" y2="234"/><text class="msg" x="128" y="228">!tb approve A1</text>
-    <line class="m mok" x1="480" y1="268" x2="836" y2="268"/><text class="msg" x="836" y="262" text-anchor="end">accept</text>
-    <line class="m" x1="840" y1="302" x2="484" y2="302"/><text class="msg" x="836" y="296" text-anchor="end">turn/completed</text>
-    <line class="m mok" x1="480" y1="336" x2="124" y2="336"/><text class="msg" x="180" y="330" text-anchor="start">[TB T1] ✅ 已完成 · 3 檔 · 測試通過</text>
-  </svg>
-  <p class="sub" style="margin-top:8px">長任務期間會定期回報<strong>合併狀態卡</strong>(就地編輯、≤1/間隔、心跳);<code>!tb status</code> 隨時拉快照。</p>
-
-  <h2>telecodex 的對話回報體驗(實際用起來的感覺)</h2>
-  <p class="sub" style="margin-top:-4px">以下皆<strong>讀 telecodex 原始碼確認</strong>(非 README 推測),括號為 <code>telecodex/src</code> 行號。</p>
-
-  <svg viewBox="0 0 900 470" role="img" aria-label="telecodex 單訊息變形時間軸">
-    <defs>
-      <marker id="a3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ea580c"/></marker>
-      <style>
-        .bub{fill:#161b22;stroke:#30363d;rx:10}
+        .ax{stroke:#30363d;stroke-width:2}
+        .tm{font:600 12px "Consolas",monospace;fill:#ea580c}
         .t{font:13px "Segoe UI",sans-serif;fill:#e6edf3}
-        .tm{font:12px "Consolas",monospace;fill:#9da7b3}
-        .lbl{font:11.5px "Segoe UI",sans-serif;fill:#9da7b3}
-        .ev{font:11.5px "Consolas",monospace;fill:#26a5e4}
-        .hd{font:600 13px "Segoe UI",sans-serif;fill:#ea580c}
-        .ax{stroke:#ea580c;stroke-width:2;stroke-dasharray:5 4}
+        .d{font:12px "Segoe UI",sans-serif;fill:#9da7b3}
+        .q{font:600 12px "Segoe UI",sans-serif;fill:#3fb950}
+        .l{font:600 12px "Segoe UI",sans-serif;fill:#f85149}
+      </style>
+    </defs>
+    <line class="ax" x1="90" y1="40" x2="90" y2="262"/>
+
+    <circle cx="90" cy="52" r="6" fill="#26a5e4"/>
+    <text class="tm" x="24" y="56">14:02</text>
+    <text class="t" x="110" y="50">🎙 語音:「把昨天那個型別錯誤修掉,跑一下測試」</text>
+    <text class="d" x="110" y="68">不用打專案名、不用想指令 → <tspan class="q">§3.1</tspan></text>
+
+    <circle cx="90" cy="98" r="6" fill="#26a5e4"/>
+    <text class="tm" x="24" y="102">14:02</text>
+    <text class="t" x="110" y="96">⏳ 已收到 <tspan class="d">(你人在螢幕前,不算推播成本)</tspan></text>
+
+    <circle cx="90" cy="140" r="6" fill="#3fb950"/>
+    <text class="tm" x="24" y="144">14:03<tspan x="24" dy="14">→14:13</tspan></text>
+    <text class="t" x="110" y="138">跑 git diff、改檔、npm test — <tspan class="q">全在白名單,一次都沒吵你</tspan></text>
+    <text class="d" x="110" y="156">同一則訊息就地變成「⏳ npm test 執行中 · 更新於 14:07:32」</text>
+    <text class="d" x="110" y="173">心跳時間戳回答「它還活著嗎」 → <tspan class="q">§3.2 推播 0 次</tspan></text>
+
+    <circle cx="90" cy="203" r="6" fill="#f85149"/>
+    <text class="tm" x="24" y="207">14:14</text>
+    <text class="t" x="110" y="201">📳 <tspan class="l">響第一次、也是唯一一次</tspan>:✅ 完成 · 改 1 檔 · 12 passed</text>
+    <text class="d" x="110" y="219">結論在第一行 30 字內可判斷成敗 → <tspan class="q">§3.4</tspan></text>
+
+    <circle cx="90" cy="249" r="6" fill="#26a5e4"/>
+    <text class="tm" x="24" y="253">19:30</text>
+    <text class="t" x="110" y="247">回電腦 <tspan style="font-family:Consolas">codex resume</tspan> — 同一個 thread,下午講過的不用重講</text>
+    <text class="d" x="110" y="265">手機和終端機是<tspan style="fill:#e6edf3">同一個工作階段的兩個視窗</tspan> → <tspan class="q">§3.5,v2 完全沒講的賣點</tspan></text>
+
+    <rect x="560" y="120" width="360" height="62" fill="#0f141b" stroke="#30363d" rx="8"/>
+    <text class="d" x="576" y="142">想跑沒見過的指令 → 才多響一次問你,回 <tspan style="font-family:Consolas;fill:#e6edf3">ok</tspan></text>
+    <text class="d" x="576" y="162">想動 AgentHub 以外的檔 → <tspan class="l">連問都不問,直接拒絕</tspan></text>
+  </svg>
+
+  <h2>六條設計原則</h2>
+  <div class="grid3">
+    <div class="card"><h4>P1 打字量與風險成正比</h4><p>安全的事 0~1 個字;只有真的會搞砸的事才要你多打字。</p></div>
+    <div class="card"><h4>P2 編輯優於新訊息</h4><p>新訊息會推播,是稀缺資源。進度一律就地編輯。</p></div>
+    <div class="card"><h4>P3 沉默也是訊號</h4><p>不刷屏,但<strong>永遠不無聲卡住</strong>;心跳讓你知道它還活著。</p></div>
+    <div class="card"><h4>P4 預設就對</h4><p>不指定專案 = AgentHub。幾乎不需要設定——設定項愈多愈不方便。</p></div>
+    <div class="card"><h4>P5 結論優先,細節 on demand</h4><p>手機預設只給一行;<code>!tb 細節</code> 才展開。</p></div>
+    <div class="card"><h4>P6 安全邊界是硬牆,不是問答題</h4><p>「絕對不行」直接拒、「絕對可以」直接跑;只有灰區才打擾你。</p></div>
+  </div>
+
+  <h2>安全模型:兩道硬牆 + 一組名單(而不是一直問你)</h2>
+  <p class="sub" style="margin-top:-4px">出發點是<strong>便利</strong>,不是防禦。先命中先決定,<strong>不往下走</strong>:</p>
+
+  <svg viewBox="0 0 940 300" role="img" aria-label="安全判斷順序:硬牆與名單">
+    <defs>
+      <marker id="fa" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8b949e"/></marker>
+      <style>
+        .bx{fill:#161b22;stroke:#30363d;rx:10}
+        .h{font:600 13.5px "Segoe UI",sans-serif;fill:#e6edf3}
+        .s{font:12px "Segoe UI",sans-serif;fill:#9da7b3}
+        .out{font:600 12.5px "Segoe UI",sans-serif}
+        .fl{stroke:#8b949e;stroke-width:1.6;fill:none}
       </style>
     </defs>
 
-    <text class="hd" x="24" y="26">同一則訊息(或私訊草稿)持續被覆寫 — 聊天室不會被進度洗版</text>
+    <rect class="bx" x="24" y="18" width="150" height="46"/>
+    <text class="h" x="99" y="40" text-anchor="middle">Codex 要做一件事</text>
+    <text class="s" x="99" y="57" text-anchor="middle">讀檔 / 寫檔 / 跑指令</text>
 
-    <line class="ax" x1="44" y1="48" x2="44" y2="404" marker-end="url(#a3)"/>
-    <text class="lbl" x="18" y="230" transform="rotate(-90 18 230)" text-anchor="middle">時間</text>
+    <line class="fl" x1="174" y1="41" x2="238" y2="41" marker-end="url(#fa)"/>
 
-    <!-- step 1 -->
-    <rect class="bub" x="70" y="48" width="430" height="42"/>
-    <text class="t" x="88" y="74">⏳</text>
-    <text class="ev" x="520" y="66">送出後立刻出現</text>
-    <text class="lbl" x="520" y="82">佔位:讓你知道「收到了」</text>
+    <rect class="bx" x="238" y="14" width="210" height="54" stroke="#f85149"/>
+    <text class="h" x="343" y="36" text-anchor="middle">① 路徑硬牆</text>
+    <text class="s" x="343" y="54" text-anchor="middle">目標在 D:\AgentHub 外?</text>
+    <line class="fl" x1="448" y1="41" x2="700" y2="41" marker-end="url(#fa)"/>
+    <text class="out" x="574" y="32" text-anchor="middle" fill="#f85149">命中</text>
+    <rect class="bx" x="700" y="18" width="216" height="46" fill="rgba(248,81,73,.12)" stroke="#f85149"/>
+    <text class="out" x="808" y="38" text-anchor="middle" fill="#f85149">拒絕,不問</text>
+    <text class="s" x="808" y="55" text-anchor="middle">連你本人也不能批准</text>
 
-    <!-- step 2 -->
-    <rect class="bub" x="70" y="108" width="430" height="42"/>
-    <text class="t" x="88" y="134">⏳ Running `npm test`</text>
-    <text class="ev" x="520" y="126">item.started (command_execution)</text>
-    <text class="lbl" x="520" y="142">codex.rs:1504 → Progress("Running …")</text>
+    <line class="fl" x1="343" y1="68" x2="343" y2="92" marker-end="url(#fa)"/>
 
-    <!-- step 3 -->
-    <rect class="bub" x="70" y="168" width="430" height="60"/>
-    <text class="t" x="88" y="192">⏳ npm test completed</text>
-    <text class="tm" x="88" y="212">12 passing, 0 failing</text>
-    <text class="ev" x="520" y="188">item.completed (+ aggregatedOutput)</text>
-    <text class="lbl" x="520" y="204">codex.rs:1509-1526</text>
+    <rect class="bx" x="238" y="92" width="210" height="54" stroke="#f85149"/>
+    <text class="h" x="343" y="114" text-anchor="middle">② 指令黑名單</text>
+    <text class="s" x="343" y="132" text-anchor="middle">rm -rf / 提權 / 外洩 / 下載即執行</text>
+    <line class="fl" x1="448" y1="119" x2="700" y2="119" marker-end="url(#fa)"/>
+    <text class="out" x="574" y="110" text-anchor="middle" fill="#f85149">命中</text>
+    <rect class="bx" x="700" y="96" width="216" height="46" fill="rgba(248,81,73,.12)" stroke="#f85149"/>
+    <text class="out" x="808" y="116" text-anchor="middle" fill="#f85149">拒絕,不問</text>
+    <text class="s" x="808" y="133" text-anchor="middle">對 rm -rf 問「要嗎?」本身就是失敗</text>
 
-    <!-- step 4 -->
-    <rect class="bub" x="70" y="246" width="430" height="60" stroke="#3fb950"/>
-    <text class="t" x="88" y="270">已修正 foo.ts 型別錯誤;測試全綠。</text>
-    <text class="tm" x="88" y="290">變更:foo.ts · 指令:npm test</text>
-    <text class="ev" x="520" y="266" fill="#3fb950">agent_message → AssistantText</text>
-    <text class="lbl" x="520" y="282">has_assistant_text latch:此後 progress</text>
-    <text class="lbl" x="520" y="297">不再覆蓋答案(turns.rs:584/596/605)</text>
+    <line class="fl" x1="343" y1="146" x2="343" y2="170" marker-end="url(#fa)"/>
 
-    <!-- finish -->
-    <rect class="bub" x="70" y="326" width="430" height="34" stroke="#3fb950" stroke-dasharray="4 3"/>
-    <text class="t" x="88" y="348">(收尾)全文 split_text → 多則真訊息</text>
-    <text class="ev" x="520" y="342" fill="#3fb950">finish() = flush(force)</text>
-    <text class="lbl" x="520" y="358">略過 debounce/截斷 · chunk 3500</text>
+    <rect class="bx" x="238" y="170" width="210" height="54" stroke="#3fb950"/>
+    <text class="h" x="343" y="192" text-anchor="middle">③ 指令白名單</text>
+    <text class="s" x="343" y="210" text-anchor="middle">npm test / git diff / tsc …</text>
+    <line class="fl" x1="448" y1="197" x2="700" y2="197" marker-end="url(#fa)"/>
+    <text class="out" x="574" y="188" text-anchor="middle" fill="#3fb950">命中</text>
+    <rect class="bx" x="700" y="174" width="216" height="46" fill="rgba(63,185,80,.12)" stroke="#3fb950"/>
+    <text class="out" x="808" y="194" text-anchor="middle" fill="#3fb950">直接執行,不打擾</text>
+    <text class="s" x="808" y="211" text-anchor="middle">推播 0 次</text>
 
-    <!-- side rail -->
-    <rect x="70" y="382" width="800" height="70" fill="#0f141b" stroke="#30363d" rx="10"/>
-    <text class="hd" x="88" y="404">全程並行的兩件事</text>
-    <text class="lbl" x="88" y="424">① 每 4 秒 sendChatAction(typing) — 零訊息成本的「我還活著」(turns.rs:1164-1184)</text>
-    <text class="lbl" x="88" y="442">② 更新節流 max(edit_debounce_ms 900ms, 該 chat 送出間隔);沒變 / 未到間隔就不送(turns.rs:699-704)</text>
+    <line class="fl" x1="343" y1="224" x2="343" y2="248" marker-end="url(#fa)"/>
+
+    <rect class="bx" x="238" y="248" width="210" height="42" stroke="#d29922"/>
+    <text class="h" x="343" y="274" text-anchor="middle">④ 灰區(以上皆非)</text>
+    <line class="fl" x1="448" y1="269" x2="700" y2="269" marker-end="url(#fa)"/>
+    <rect class="bx" x="700" y="248" width="216" height="42" fill="rgba(210,153,34,.12)" stroke="#d29922"/>
+    <text class="out" x="808" y="266" text-anchor="middle" fill="#d29922">才問你 — 回 ok(2 字元)</text>
+    <text class="s" x="808" y="282" text-anchor="middle">回「ok 永遠」→ 升級白名單,以後不問</text>
   </svg>
 
   <div class="grid" style="margin-top:14px">
-    <div class="card"><h3>一則訊息在「變形」</h3><p><code>pending_text</code> 是<strong>取代</strong>而非追加(<code>turns.rs:581-602</code>)。整輪只佔一個訊息位置,最後一版永遠是答案。</p></div>
-    <div class="card"><h3>兩種書寫表面</h3><p>私訊用 <strong>草稿</strong> <code>sendMessageDraft</code>(進度<strong>不落聊天記錄</strong>,<code>turns.rs:47</code>);群組退回「佔位訊息 + editMessageText 就地改寫」。</p></div>
-    <div class="card"><h3>過程可以掉,結論不能掉</h3><p>收到 <code>retry_after</code> → 進入 <code>edit_backoff_until</code>,期間 flush 直接跳過;但收尾 <code>force</code> 一定把全文分段送出(<code>turns.rs:623-635 / 799-807</code>)。</p></div>
-    <div class="card"><h3>進行中截斷 / 收尾全文</h3><p>進行中只送 <code>truncate_for_live_update</code>(第一段);收尾才 <code>split_text</code> 全送 — 不用一直往下滑,但拿得到完整內容。</p></div>
-    <div class="card"><h3>決策用按鈕,不用打字</h3><p>inline keyboard:<code>Allow once</code> / <code>Allow session</code> / <code>Decline</code> / <code>Cancel turn</code>;狀態卡同步改成「Waiting for command approval」讓你<strong>看得出為何停住</strong>。逾時 <strong>15 分鐘 → Decline</strong>,永不自動批(<code>presentation.rs:27-92 / 187-197</code>)。</p></div>
-    <div class="card"><h3>中途改口不必等</h3><p>執行中送<strong>純文字</strong>即 <code>turn/steer</code> 併入當前輪;<strong>帶附件</strong>才排下一輪。<code>/history</code> 也是 Prev/Next 就地翻頁,不洗版。</p></div>
+    <div class="card"><h4>硬牆一:路徑(不可批准)</h4>
+      <p>讀或寫只要落在 <code>D:\AgentHub</code> 外,<strong>一律違規、直接拒絕</strong>。涵蓋 <code>..</code> 跳脫、絕對路徑、UNC、symlink/junction、環境變數展開後越界——以<strong>解析後的真實路徑</strong>判定。</p>
+      <p><code>unlock</code> 只切換「AgentHub <strong>之內</strong>能不能寫」,<strong>永遠不擴大路徑範圍</strong>。</p></div>
+    <div class="card"><h4>為什麼這樣更好用</h4>
+      <p>這是唯一能讓你<strong>敢隨手交辦</strong>的保證。你不必在批准當下自己判斷「這個路徑安不安全」——那本來就不該是手機上做的事。</p>
+      <p>誤發的損害因此有<strong>明確天花板</strong>。</p></div>
   </div>
 
-  <h3 style="margin:22px 0 6px;font-size:15px;color:#26a5e4">TeamBot 的取捨(Teams 沒有的東西)</h3>
+  <h3>指令黑名單(命中即拒,不拿來問你)</h3>
   <table>
-    <tr><th>telecodex 手法</th><th>Teams 可行性</th><th>TeamBot 作法</th></tr>
-    <tr><td><code>sendMessageDraft</code> 私訊草稿</td><td>❌ 無對應 API</td><td>一律「佔位訊息 + 就地編輯」狀態卡</td></tr>
-    <tr><td>inline keyboard 按鈕</td><td>❌ CDP 操作網頁版送不出可互動卡片</td><td>文字代碼 <code>!tb approve &lt;碼&gt;</code> <span class="pill done">已實作</span></td></tr>
-    <tr><td><code>sendChatAction</code> typing</td><td>⚠️ 網頁 DOM 不穩定</td><td>狀態卡內的<strong>心跳時間戳</strong> <span class="pill done">已實作</span></td></tr>
-    <tr><td><code>retry_after</code> 退避</td><td>✅ Teams 也會限流</td><td>送出失敗即退避;<code>finish</code> 強制送出</td></tr>
-    <tr><td>debounce 900ms / chunk 3500</td><td>✅</td><td>直接沿用為預設值</td></tr>
-    <tr><td><code>pending_text</code> 取代語意</td><td>✅</td><td><code>TurnStatus</code> + <code>reduceTurn</code> <span class="pill done">已實作</span></td></tr>
-    <tr><td>逾時 → Decline</td><td>✅</td><td><code>sweepExpired</code>,絕不自動批 <span class="pill done">已實作</span></td></tr>
-  </table>
-  <p class="sub" style="margin-top:8px"><strong>要採納但尚未實作</strong>:上圖的「一則訊息持續變形」目前只到模型層(<code>TurnStatus</code> 算得出該不該更新),<strong>還沒接上 Teams 的訊息編輯</strong> → 即 roadmap <strong>H</strong>;以及「進行中截斷、收尾 force 全文分段」的兩段式策略。</p>
-
-  <h2>指令模型</h2>
-  <table>
-    <tr><th>指令</th><th>作用</th><th>狀態</th></tr>
-    <tr><td><code>!tb &lt;自然語言&gt;</code> / <code>run</code></td><td>交辦(預設 AgentHub)</td><td><span class="pill done">已實作</span></td></tr>
-    <tr><td><code>status</code> / <code>result</code> / <code>diff</code></td><td>狀態 / 結果 / 變更</td><td><span class="pill done">status ✅</span></td></tr>
-    <tr><td><code>approve</code> / <code>deny</code> / <code>answer</code></td><td>決策(繫結代碼、逾時自動拒)</td><td><span class="pill done">已實作</span></td></tr>
-    <tr><td><code>unlock [分]</code> / <code>lock</code> / <code>kill</code></td><td>切換寫入姿態 / 硬停</td><td><span class="pill done">已實作</span></td></tr>
-    <tr><td><code>steer</code> / <code>continue</code> / <code>stop</code></td><td>中途追加 / 續輪 / 收尾停</td><td><span class="pill done">引擎✅</span></td></tr>
-    <tr><td><code>use latest</code> / <code>sessions</code> / <code>new</code></td><td>切換/開新/列出 session</td><td><span class="pill plan">規劃(借鏡)</span></td></tr>
-    <tr><td><code>login</code> / <code>logout</code></td><td>Codex 裝置登入</td><td><span class="pill plan">規劃(借鏡)</span></td></tr>
+    <tr><th>類別</th><th>例(樣式比對,非窮舉)</th></tr>
+    <tr><td>破壞性刪除/格式化</td><td><code>rm -rf</code>、<code>del /s /q</code>、<code>Remove-Item -Recurse -Force</code>、<code>format</code>、<code>diskpart</code></td></tr>
+    <tr><td>Git 歷史改寫</td><td><code>push --force</code>、<code>reset --hard</code>、<code>clean -xfd</code>、<code>filter-branch</code></td></tr>
+    <tr><td>提權</td><td><code>sudo</code>、<code>runas</code>、<code>Start-Process -Verb RunAs</code>、<code>net user</code></td></tr>
+    <tr><td>機密外洩</td><td>讀取 <code>~/.ssh</code>、<code>*.pem</code>、<code>.env</code>、<code>credentials</code>、<code>GH_TOKEN</code> 後外送</td></tr>
+    <tr><td>下載即執行</td><td><code>curl … | bash</code>、<code>iwr … | iex</code>、<code>Invoke-Expression</code></td></tr>
+    <tr><td>削弱防護</td><td>關閉 Defender/防火牆、改安全性 registry、<code>Set-ExecutionPolicy Unrestricted</code></td></tr>
+    <tr><td>對外網路</td><td>預設整個沙箱 <code>networkAccess = false</code></td></tr>
   </table>
 
-  <h2>借鏡 telecodex 的 v2 需求</h2>
-  <div class="grid">
-    <div class="card"><h3>H · 串流回覆就地編輯</h3><p>單訊息編輯 + debounce + 分段 + 限流退避(<code>edit_debounce_ms</code> / <code>max_text_chunk</code> / <code>retry_after</code>)。</p></div>
-    <div class="card"><h3>I · 多會話 / 切換 thread</h3><p><code>use latest</code>、<code>sessions</code>、<code>new</code>;每對話一 session(topic-aware)。</p></div>
-    <div class="card"><h3>J · 附件 in/out</h3><p><code>.teambot/inbox</code> 收檔、<code>turns/out</code> 自動回傳產物。</p></div>
-    <div class="card"><h3>K · 歷史匯入 / 綁定 thread</h3><p>以 cwd 匯入 Codex 歷史;<code>use &lt;thread&gt;</code> 接既有對話。</p></div>
-    <div class="card"><h3>L · Codex 裝置登入</h3><p><code>!tb login</code>/<code>logout</code>;未登入不啟動 turn。</p></div>
-    <div class="card"><h3>N · ACL 角色 + 稽核</h3><p>allowed / admin / user + <code>audit_log</code>(現有 allowlist 擴為角色)。</p></div>
-  </div>
+  <h3>白名單(日常指令直接跑,0 打擾)</h3>
+  <table>
+    <tr><th>類別</th><th>例</th></tr>
+    <tr><td>讀取/檢視</td><td><code>ls</code>、<code>dir</code>、<code>type</code>、<code>cat</code>、<code>git status</code>、<code>git diff</code>、<code>git log</code></td></tr>
+    <tr><td>建置測試</td><td><code>npm test</code>、<code>npm run &lt;script&gt;</code>、<code>npm ci</code>、<code>node</code>、<code>tsc</code>、<code>dotnet build/test</code></td></tr>
+    <tr><td>本地版控</td><td><code>git add</code>、<code>git commit</code>、<code>git checkout -b</code>、<code>git stash</code></td></tr>
+    <tr><td>檔案編輯</td><td>AgentHub <strong>之內</strong>的建立/改寫(已受硬牆保護)</td></tr>
+  </table>
+  <p class="sub" style="margin-top:8px">白名單是 <strong>per-project</strong>,由 <code>ok 永遠</code> 逐步長出來 → <strong>打擾隨使用時間遞減</strong>。但白名單<strong>不能覆蓋硬牆</strong>:<code>git commit</code> 在白名單上,若要寫的檔在 AgentHub 外,仍然被拒。</p>
+  <p class="sub"><strong>與現有實作的落差</strong>:<code>src/security/guards.ts</code> 目前把破壞性/提權歸類為 <strong>always-approve(一律要問)</strong>,依本節要改成 <strong>deny(直接拒)</strong> 並新增白名單比對 → roadmap <strong>R7</strong>。</p>
 
-  <h2>安全姿態(MUST)</h2>
+  <h2>推播預算(什麼時候會吵你)</h2>
+  <p class="sub" style="margin-top:-4px">每輪任務目標:<strong>常態 1 次</strong>(只有「完成」)。加上名單制後,批准那次在一般開發任務裡不會發生,≤2 次是<strong>最壞情況而非常態</strong>。</p>
+  <table>
+    <tr><th>事件</th><th>送法</th><th>推播?</th></tr>
+    <tr><td>收到交辦 → <code>⏳ 已收到</code></td><td>新訊息</td><td>你剛發完,人在螢幕前,不算成本</td></tr>
+    <tr><td>進度更新(可能數十次)</td><td><strong>編輯同一則</strong></td><td><span class="quiet">否</span> ← 整份設計的關鍵</td></tr>
+    <tr><td>心跳時間戳</td><td><strong>編輯同一則</strong></td><td><span class="quiet">否</span></td></tr>
+    <tr><td>指令命中<strong>白名單</strong>直接跑</td><td><strong>編輯同一則</strong></td><td><span class="quiet">否</span> ← 名單制買到的安靜</td></tr>
+    <tr><td>命中<strong>黑名單 / 路徑越界</strong>被拒</td><td><strong>編輯同一則</strong>(寫明原因)</td><td><span class="quiet">否</span>(不必問你,所以也不必吵你)</td></tr>
+    <tr><td>需要你批准(僅<strong>灰區</strong>)</td><td>新訊息</td><td><span class="loud">是</span>(少數情況)</td></tr>
+    <tr><td>完成 / 失敗</td><td>新訊息</td><td><span class="loud">是</span>(常態唯一一次)</td></tr>
+    <tr><td>卡住警告(&gt;5 分鐘無進展)</td><td>編輯 + <strong>一次</strong>新訊息</td><td><span class="loud">是</span>(例外,值得)</td></tr>
+  </table>
+
+  <h2>指令表(按實際常用度排,不按功能分類)</h2>
+  <table>
+    <tr><th>你會打的</th><th>意思</th><th>狀態</th></tr>
+    <tr><td><code>!tb &lt;一句話&gt;</code></td><td>交辦,預設 AgentHub</td><td><span class="pill done">✅</span></td></tr>
+    <tr><td><code>ok</code> / <code>no</code></td><td>批准/拒絕<strong>唯一</strong>待決(免代碼)</td><td><span class="pill p0">🔜 R1 · P0</span></td></tr>
+    <tr><td>(執行中直接打字)</td><td>中途轉向 <code>turn/steer</code></td><td><span class="pill done">引擎 ✅</span></td></tr>
+    <tr><td><code>!tb status</code></td><td>拉快照</td><td><span class="pill done">✅</span></td></tr>
+    <tr><td><code>!tb 細節</code> / <code>diff</code> / <code>檔案</code></td><td>展開細節</td><td><span class="pill plan">部分</span></td></tr>
+    <tr><td><code>!tb stop</code> / <code>kill</code></td><td>收尾停 / 硬停</td><td><span class="pill done">✅</span></td></tr>
+    <tr><td><code>!tb unlock 30</code> / <code>lock</code></td><td>開放 <strong>AgentHub 內</strong>寫入 30 分鐘(<strong>不擴大路徑範圍</strong>)</td><td><span class="pill done">✅</span></td></tr>
+    <tr><td><code>ok 2</code> / <code>no 2</code></td><td>多筆待決時指定<strong>小序號</strong>(非隨機碼)</td><td><span class="pill plan">✅ 改序號 🔜</span></td></tr>
+    <tr><td><code>ok 永遠</code> / <code>!tb 名單</code></td><td>加進本專案白名單 / 檢視名單</td><td><span class="pill p0">🔜 R7 · P0</span></td></tr>
+    <tr><td><code>!tb 交接</code></td><td>印 thread/cwd,回電腦接手</td><td><span class="pill plan">🔜 R5</span></td></tr>
+    <tr><td><code>!tb login</code> / <code>logout</code></td><td>Codex 裝置登入</td><td><span class="pill plan">🔜 R6</span></td></tr>
+  </table>
+  <p class="sub" style="margin-top:8px"><strong>刻意不做</strong>:<code>run &lt;專案&gt;</code>、<code>sessions</code>、<code>use latest</code>、<code>new</code>——在單人 + 單一 AgentHub 場景下是<strong>多餘的選擇</strong>,只會讓人猶豫。</p>
+
+  <h2>用便利重排之後,roadmap 優先序變了</h2>
+  <p class="sub" style="margin-top:-4px">這是 v3 相對 v2 最實質的產出:<strong>同一批候選功能,換個評分標準就換了順序</strong>。</p>
+  <table>
+    <tr><th>代號</th><th>需求</th><th>v2 位置</th><th>v3</th><th>為什麼變</th></tr>
+    <tr><td><strong>R0</strong></td><td>驗證推播經濟學</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>它決定 §3.2/§5 成不成立,不驗證就開工等於賭</td></tr>
+    <tr><td><strong>R7</strong></td><td><strong>硬牆 + 名單制</strong>:路徑越界直接拒、黑名單直接拒、白名單直接跑、<code>ok 永遠</code></td><td>v2 是「危險操作一律要問」</td><td><span class="pill p0">P0</span></td><td>比 R1 更根本:R1 降低<strong>單次</strong>成本,R7 降低<strong>次數</strong>。一般任務可做到 0 次批准</td></tr>
+    <tr><td><strong>R1</strong></td><td>單一待決時 <code>ok</code> 免代碼</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>改動極小,直接解掉最痛的一步(11 字元 → 2 字元)</td></tr>
+    <tr><td><strong>H</strong></td><td>串流就地編輯接上 Teams</td><td>roadmap 第 1 項</td><td><span class="pill p0">P0</span></td><td>升級理由變了:它不只是好看,它是<strong>唯一能不吵你的手段</strong></td></tr>
+    <tr><td><strong>R3</strong></td><td>語音轉文字(原 M)</td><td>標「<strong>選用</strong>」</td><td><span class="pill plan">P1 ↑</span></td><td>手機打字是最大摩擦。這是手機場景的<strong>第一輸入法</strong>,不是選配</td></tr>
+    <tr><td><strong>R4</strong></td><td>附件 in/out + 產物自動回傳(原 J)</td><td>roadmap 中段</td><td><span class="pill plan">P1</span></td><td>「分享即交辦」是最自然的入口;產物不自動回傳等於沒完成</td></tr>
+    <tr><td><strong>R6</strong></td><td>Codex 裝置登入(原 L)</td><td>roadmap 中段</td><td><span class="pill plan">P1</span></td><td>未登入時<strong>靜默失敗</strong>是最糟的體驗</td></tr>
+    <tr><td><strong>R5</strong></td><td><code>!tb 交接</code></td><td>沒有這項</td><td><span class="pill plan">P1</span></td><td>「手機↔電腦同一 thread」的賣點只差一個指令就能兌現</td></tr>
+    <tr><td><strong>R2</strong></td><td>自己聊天免前綴(<code>.</code> 逃脫)</td><td>沒有這項</td><td><span class="pill plan">P1</span></td><td>純粹省稅;但需一次性確認,避免把筆記誤送</td></tr>
+    <tr><td>I</td><td>多會話 / <code>use latest</code> / <code>sessions</code></td><td>roadmap 第 2 項</td><td>P2 <strong>降級</strong></td><td>單人 + 單一 AgentHub 用不到,反而增加選擇成本</td></tr>
+    <tr><td>K</td><td>歷史匯入</td><td>roadmap 中段</td><td>P2</td><td>常駐 resume 已覆蓋日常;匯入是邊緣情境</td></tr>
+    <tr><td>N</td><td>ACL 角色 + audit_log</td><td>roadmap 中段</td><td>P2</td><td>單人用不到,等群組場景真的開了再說</td></tr>
+    <tr><td>O</td><td>設定檔驅動</td><td>roadmap 末</td><td>P2</td><td>違反 P4「預設就對」。設定項愈多愈不方便</td></tr>
+  </table>
+
+  <h2>成功指標(全部可量測,取代 v2 的形容詞)</h2>
+  <table>
+    <tr><th>指標</th><th>目標</th></tr>
+    <tr><td>交辦一件事的輸入成本</td><td>≤ 15 字元或 1 則語音</td></tr>
+    <tr><td><strong>一般開發任務的批准次數</strong></td><td><strong>0</strong>(靠名單制,不是靠放寬)</td></tr>
+    <tr><td>真的要批准時的輸入成本</td><td>≤ 3 字元</td></tr>
+    <tr><td>每輪任務手機推播次數</td><td>常態 1,最壞 2</td></tr>
+    <tr><td>長任務期間「不知道它還活著」的時間</td><td>0(心跳 ≤ 60s)</td></tr>
+    <tr><td>結論可判斷成敗所需閱讀量</td><td>第一行 30 字內</td></tr>
+    <tr><td>手機 → 電腦重述上下文次數</td><td>0</td></tr>
+    <tr><td><strong>AgentHub 外的存取成功次數</strong></td><td><strong>0</strong>(硬牆,含繞道寫法)</td></tr>
+    <tr><td>自動批准次數</td><td>0(永遠)</td></tr>
+  </table>
+
+  <h2>待決(需要你拍板)</h2>
   <div class="grid">
-    <div class="card"><h3>預設 read-only</h3><p><code>unlock</code> 時限切 workspace-write;寫入限 AgentHub、拒網路;<code>lock</code>/<code>kill</code> + 閒置自動 suspend。</p></div>
-    <div class="card"><h3>永遠需批准</h3><p>破壞性 / 網路 / 機密 / 提權 / git 改寫;危險操作導到自己聊天。</p></div>
-    <div class="card"><h3>去識別</h3><p>對外訊息與日誌掃除 token/cookie/env;群組只給摘要。</p></div>
-    <div class="card"><h3>身分 &amp; 稽核</h3><p>不可變 sender id 授權;附加式稽核;條款風險需知情。</p></div>
+    <div class="card"><h4>1 · 自己聊天免前綴,預設開還關?</h4><p>開了最方便,但若你把自己聊天當筆記本會誤送。<strong>建議:預設關,首次使用時問一次。</strong></p></div>
+    <div class="card"><h4>2 · 卡住警告的門檻?</h4><p><strong>建議 5 分鐘</strong>無任何 Codex 事件即示警。</p></div>
+    <div class="card"><h4>3 · 群組要不要做?</h4><p>目前所有設計都假設「自己聊天」。群組要加:前綴強制、批准碼不外曝、只回摘要。<strong>建議延後。</strong></p></div>
+    <div class="card"><h4>4 · <code>ok 永遠</code> 的白名單能反悔嗎?</h4><p><strong>建議做 <code>!tb 名單 移除 &lt;n&gt;</code></strong>,否則白名單只會長不會縮。</p></div>
+    <div class="card" style="grid-column:1/-1;border-color:rgba(210,153,34,.5)"><h4>5 · 讀取也受路徑硬牆限制嗎?</h4>
+      <p><strong>建議「是」</strong>——否則 Codex 可以讀 <code>C:\Users\…\.ssh</code> 再把內容寫進 AgentHub 的檔案裡,<strong>硬牆等於漏了</strong>。代價是不能叫它「參考一下隔壁專案的寫法」。這題直接決定硬牆有沒有意義。</p></div>
   </div>
 
   <h2>現況</h2>
-  <p class="sub">27 個 task 完成(全套測試 <strong>136/136</strong>);已整合進常駐 runner 並於<strong>真實 Teams + 真實 Codex</strong> 實測:接收 → read-only 執行 → 彙整回報 → 批准 → 重啟 <code>thread/resume</code> 連續。Phase 0 於真實租戶 = GO(穩定 id、送出、接收、隱藏背景收訊)。</p>
+  <p class="sub">27 個 task 完成(測試 <strong>136 passed / 0 skipped</strong>);已整合進常駐 runner 並於<strong>真實 Teams + 真實 Codex</strong> 實測完整迴圈:接收 → read-only 執行 → 彙整回報 → 批准 → 重啟 <code>thread/resume</code> 連續。Phase 0 於真實租戶 = GO(穩定 id、送出、接收、隱藏背景收訊)。</p>
+  <p class="sub"><strong>非目標(首版)</strong>:遷官方 Teams 傳輸(Graph / Bot Framework);跨組織多租戶;<strong>AgentHub 以外的任何存取</strong>(硬牆,不是「暫未支援」而是<strong>刻意不給</strong>);團隊協作型 ACL。</p>
 
   <div class="foot">
-    TeamBot PRD v2 · 參考 docs/architecture.md、docs/product-brainstorm.md · 借鏡 Headcrab/telecodex(MIT)。
-    傳輸差異:Teams 走 Electron 自有表面 + CDP(條款風險,長期評估 Graph/Bot Framework)。
+    TeamBot PRD v3 · 完整內容見 <code>docs/PRD.md</code>(含附錄 A:telecodex 體驗證據,附原始碼行號)· 參考 <code>docs/architecture.md</code>、<code>docs/product-brainstorm.md</code>。<br/>
+    傳輸差異:telecodex 走 Telegram 官方 Bot API(有草稿/按鈕/typing 三種原生手段);Teams 沒有等效通道,TeamBot 走 Electron 自有表面 + CDP —— <strong>§3.2/§3.3 的設計本質上就是在補那三個洞</strong>。CDP 自動化有條款風險,長期評估 Graph / Bot Framework。
   </div>
 </div>
 </body>
