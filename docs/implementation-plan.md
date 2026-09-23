@@ -1,6 +1,28 @@
 # TeamBot 分階段實作計畫
 
-目前狀態：僅規劃。所有項目尚未實作或驗收。
+目前狀態：**實作中,並已端到端跑通**。任務拆解於 `tasks/`(`tasks/README.md`),逐 task 附真實證據、個別 commit/push。原始 Phase 0–3 為早期規劃;實際落地情形與新產品方向見下方「Phase R — 常駐助理」。
+
+## Phase R — 常駐助理(現行產品方向)
+
+由 brainstorm 收斂(見 `docs/product-brainstorm.md`)。核心:**單一常駐 Codex 工作階段**執行於 `D:\AgentHub`,經 Teams(CDP 接自有 WebContentsView)接收 `!tb`/`@tb` 指令,在**同一 thread 接續每一輪**(對話連續),持續回報並在需要時請求決策。
+
+**已完成並實測(live 於真實租戶):**
+- Phase 0 可行性 = GO:登入、穩定 chatId/messageId/senderId、送出、接收、隱藏背景收訊(task018)。
+- 傳輸:Playwright 經 **CDP 連自有 Teams 表面**(task019);真實選擇器接進正式 adapter(task010 teams profile)。
+- 常駐 session + `!tb`/`@tb` + 全形容錯 + 自然語言預設 AgentHub(task020、e2e runner)。
+- 安全預設(路線圖 A,task021):預設 read-only、`unlock/lock/kill`、寫入限 AgentHub + 拒網路、危險操作分類、對外去識別。
+
+**待實作路線圖(B–G,已立為 task,逐項驗證):**
+- B 結果彙整器:turn fold → `final_answer` 擷取 + 檔案變更清單;outbox `(turnId,kind)` 唯一鍵 + Teams 編輯冪等。
+- C 狀態卡 + coalescer 接線:就地編輯單卡、plan/輸出 tail/token、心跳、`status` 讀快照。
+- D 批准註冊表:code↔requestId、多待決、逾時暫停、`requestUserInput` 答覆、`steer` 轉向。
+- E 事件化收件:Teams DOM `MutationObserver` 推送取代輪詢 + 單調游標去重。
+- F 連續性/復原:`thread/resume`、開機重播 approvals/outbox/in-flight。
+- G 多任務(選用):額外 thread + git worktree 隔離。
+
+三大互動場景(回報/狀態/決策)的設計細節見 `docs/product-brainstorm.md`。
+
+---
 
 ## Phase 0 — 確認介接可行性
 

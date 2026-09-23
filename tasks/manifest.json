@@ -147,6 +147,48 @@
       "spec": "Roadmap A from product-brainstorm. Default execution posture read-only; !tb unlock <duration> switches to workspace-write until expiry; !tb lock relocks; !tb kill hard-stops. Path allow-list confines writes to AgentHub (canonicalized; reject .., UNC, symlink escape, absolute-outside). always-approve classifier flags destructive/network/secret/elevation ops. Redact outbound Teams messages. Wire posture + commands into the resident runner.",
       "acceptance": "Unit tests: SecurityPolicy default read-only, unlock opens workspace-write until expiry then reverts, lock relocks; isPathAllowed confines to root; isAlwaysApprove flags destructive/network/secret/elevation; outbound redaction scrubs tokens. Parser recognizes unlock/lock/kill. Full suite green.",
       "evidence": ["security-test.txt", "parser-security-test.txt"]
+    },
+    {
+      "id": "task022", "slug": "result-reducer", "phase": "2", "env": "local",
+      "title": "Result reducer: turn fold -> final answer + change list (roadmap B)",
+      "spec": "Reduce a turn's events into one authoritative result: extract final_answer agent text (ignore commentary/deltas), collect files changed (from turn/diff/updated + fileChange items) and commands run (from commandExecution items with exit codes). Idempotent outbox keyed by (turnId, kind) with edit-upsert semantics.",
+      "acceptance": "Unit tests: reducer picks final_answer over commentary; aggregates file changes and commands; produces a two-tier summary; outbox (turnId,kind) uniqueness prevents duplicate result rows.",
+      "evidence": ["result-reducer-test.txt"]
+    },
+    {
+      "id": "task023", "slug": "status-coalescer-live", "phase": "2", "env": "local",
+      "title": "Live status model + coalescer wiring (roadmap C)",
+      "spec": "Build a per-turn live status model fed by item/plan/delta (todo), item/started (current step), commandExecution/outputDelta (tail), tokenUsage (footer); coalesce to <=1 update/interval and only when dirty; heartbeat for idle detection; a status snapshot readable without the model.",
+      "acceptance": "Unit tests: bursty deltas coalesce to one dirty-gated update; plan/step/tail/token reflected in snapshot; heartbeat flags idle; status snapshot readable synchronously.",
+      "evidence": ["status-live-test.txt"]
+    },
+    {
+      "id": "task024", "slug": "approval-registry", "phase": "2", "env": "local",
+      "title": "Approval registry: code<->requestId, timeouts, steer (roadmap D)",
+      "spec": "Registry binding Teams approval code <-> Codex server-request id; supports multiple pending, expiry (timeout -> pause/auto-decline, never auto-approve), requestUserInput answers, and steer-vs-new-turn routing. Distinguish command/file/permissions request kinds and their response shapes.",
+      "acceptance": "Unit tests: bind+resolve by code; multiple pending distinct codes; expiry auto-declines; unknown/duplicate rejected; requestUserInput answered by id; decision shapes correct per kind.",
+      "evidence": ["approval-registry-test.txt"]
+    },
+    {
+      "id": "task025", "slug": "event-driven-inbox", "phase": "3", "env": "local",
+      "title": "Event-driven Teams inbox via MutationObserver (roadmap E)",
+      "spec": "Replace read-polling with a MutationObserver in the Teams page that pushes new-message events to the host (exposeBinding/CDP), with a monotonic cursor and dedupe; keep a slow poll as a safety net.",
+      "acceptance": "Integration test (real browser/electron): injecting a new message node triggers a pushed event with the new message id; dedupe prevents reprocessing; falls back to poll if binding unavailable.",
+      "evidence": ["event-inbox-test.txt"]
+    },
+    {
+      "id": "task026", "slug": "resume-recovery", "phase": "3", "env": "local",
+      "title": "Continuity & recovery via thread/resume (roadmap F)",
+      "spec": "Persist the resident threadId; on boot call thread/resume to restore context; replay unresolved approvals/outbox; mark in-flight jobs interrupted and re-post status.",
+      "acceptance": "Unit/integration tests: threadId persisted+reloaded; resume path invoked; unresolved outbox/approvals replayed; in-flight jobs marked interrupted (not re-run).",
+      "evidence": ["resume-recovery-test.txt"]
+    },
+    {
+      "id": "task027", "slug": "multitask-worktrees", "phase": "post", "env": "local",
+      "title": "Optional multi-task via additional threads + git worktrees (roadmap G)",
+      "spec": "Allow opt-in parallel tasks by binding additional Codex threads to isolated git worktrees; project lock ensures same project never runs twice concurrently. Default remains single resident thread.",
+      "acceptance": "Unit tests: worktree allocator assigns isolated dirs; scheduler runs different projects in parallel while serializing same-project; default single-thread unchanged.",
+      "evidence": ["multitask-test.txt"]
     }
   ]
 }
