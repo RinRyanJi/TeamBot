@@ -30,7 +30,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task021 | 2 | local | [Security defaults: switchable read-only posture, path allow-list, always-approve, redaction](task021-security-defaults/README.md) | DONE |
 | task022 | 2 | local | [Result reducer: turn fold -> final answer + change list (roadmap B)](task022-result-reducer/README.md) | DONE |
 | task023 | 2 | local | [Live status model + coalescer wiring (roadmap C)](task023-status-coalescer-live/README.md) | pending |
-| task024 | 2 | local | [Approval registry: code<->requestId, timeouts, steer (roadmap D)](task024-approval-registry/README.md) | pending |
+| task024 | 2 | local | [Approval registry: code<->requestId, timeouts, steer (roadmap D)](task024-approval-registry/README.md) | DONE |
 | task025 | 3 | local | [Event-driven Teams inbox via MutationObserver (roadmap E)](task025-event-driven-inbox/README.md) | pending |
 | task026 | 3 | local | [Continuity & recovery via thread/resume (roadmap F)](task026-resume-recovery/README.md) | pending |
 | task027 | post | local | [Optional multi-task via additional threads + git worktrees (roadmap G)](task027-multitask-worktrees/README.md) | pending |

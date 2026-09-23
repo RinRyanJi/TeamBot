@@ -1,0 +1,11 @@
+# approval registry (code<->requestId, timeout, per-kind, input answers)
+ok 1 - kindFromMethod maps server request methods
+ok 2 - register gives distinct codes; resolve returns the bound requestId
+ok 3 - second resolve is 'used'; unknown code rejected
+ok 4 - expiry: resolve after TTL is rejected; sweepExpired reports once
+ok 5 - sweepExpired returns overdue pendings for auto-decline (never auto-approve)
+ok 6 - answerInput only works for input kind
+ok 7 - multiple pending tracked distinctly
+# tests 7
+# pass 7
+# fail 0

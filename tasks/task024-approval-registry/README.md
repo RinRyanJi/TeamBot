@@ -2,7 +2,7 @@
 
 - Phase: 2
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,16 @@ Unit tests: bind+resolve by code; multiple pending distinct codes; expiry auto-d
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed. `src/router/approval-registry.ts` `ApprovalRegistry`: binds Teams code (A1…)
+↔ Codex server-request id; `kindFromMethod` classifies command/file/permissions/input;
+`resolveApproval(code, accept)` and `answerInput(code, text)` return the bound requestId +
+decision/text (caller builds the concrete Codex response shape, keeping the registry
+decoupled from wire schemas). Multiple pending tracked; expiry rejects late resolves;
+`sweepExpired` returns overdue pendings so the caller auto-declines (never auto-approves).
+
+Real verification (`evidence/approval-registry-test.txt`): 7/7 — method→kind mapping;
+distinct codes + resolve returns bound id; used/unknown rejected; expiry rejection +
+sweep-once; sweepExpired yields overdue for auto-decline; answerInput only for input kind;
+multiple pending distinct. Full suite green.
+
+Commit: recorded on push (see git log).
