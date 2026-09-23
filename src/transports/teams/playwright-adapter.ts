@@ -63,6 +63,7 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
   private page: Page | null = null;
   private boundChatId = "";
   private writeChain: Promise<unknown> = Promise.resolve();
+  private cdpMode = false;
 
   constructor(opts: PlaywrightTeamsOptions) {
     this.opts = opts;
@@ -83,6 +84,35 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
     this.context = await this.browser.newContext(userAgent ? { userAgent } : {});
     this.page = await this.context.newPage();
     await this.page.goto(this.opts.url);
+    await this.page.waitForSelector(this.profile.chatIdSelector);
+    this.boundChatId =
+      (await this.page.getAttribute(this.profile.chatIdSelector, this.profile.chatIdAttr)) ?? "";
+  }
+
+  /**
+   * Production wiring (architecture §9): attach to the app-owned Teams surface that the
+   * Electron host already opened (authenticated, isolated), instead of launching our own
+   * browser. `cdpUrl` is the Electron host's loopback remote-debugging endpoint.
+   */
+  async connectCDP(cdpUrl: string): Promise<void> {
+    this.cdpMode = true;
+    this.browser = await chromium.connectOverCDP(cdpUrl);
+    const pages: Page[] = [];
+    for (const c of this.browser.contexts()) for (const pg of c.pages()) pages.push(pg);
+    let chosen: Page | undefined;
+    for (const pg of pages) {
+      try {
+        if (await pg.$(this.profile.chatIdSelector)) {
+          chosen = pg;
+          break;
+        }
+      } catch {
+        /* page not ready */
+      }
+    }
+    this.page = chosen ?? pages[0] ?? null;
+    if (!this.page) throw new Error("no CDP page exposing the Teams surface");
+    this.context = this.page.context();
     await this.page.waitForSelector(this.profile.chatIdSelector);
     this.boundChatId =
       (await this.page.getAttribute(this.profile.chatIdSelector, this.profile.chatIdAttr)) ?? "";
@@ -162,8 +192,13 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
 
   async close(): Promise<void> {
     await this.writeChain.catch(() => undefined);
-    if (this.context) await this.context.close();
-    if (this.browser) await this.browser.close();
+    if (this.cdpMode) {
+      // Only disconnect from the app-owned surface; do not close the Electron app.
+      if (this.browser) await this.browser.close();
+    } else {
+      if (this.context) await this.context.close();
+      if (this.browser) await this.browser.close();
+    }
     this.browser = null;
     this.context = null;
     this.page = null;

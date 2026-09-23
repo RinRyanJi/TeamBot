@@ -1,0 +1,12 @@
+# REAL: Electron host owns isolated WebContentsView + loopback CDP port; adapter connectOverCDP attaches and read/send/reconcile works
+TAP version 13
+# Subtest: adapter attaches to the Electron-owned Teams surface over CDP and read/send works
+ok 1 - adapter attaches to the Electron-owned Teams surface over CDP and read/send works
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
