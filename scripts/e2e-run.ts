@@ -80,12 +80,8 @@ async function main(): Promise<void> {
   let turnEvents: TurnEvent[] = [];
   let teams: PlaywrightTeamsAdapter | null = null;
 
-  codex.on("thread/started", (p: unknown) => {
-    const id = firstString(p, "threadId");
-    if (id) turnId ||= "";
-  });
   codex.on("turn/started", (p: unknown) => {
-    const t = firstString(p, "turnId");
+    const t = (p as { turn?: { id?: string } })?.turn?.id ?? firstString(p, "turnId");
     if (t) turnId = t;
     status.setStep("執行中", now());
   });
@@ -131,25 +127,27 @@ async function main(): Promise<void> {
       ? { type: "workspaceWrite", writableRoots: [DEFAULT_WORKSPACE.cwd], networkAccess: false, excludeTmpdirEnvVar: false, excludeSlashTmp: false }
       : { type: "readOnly", networkAccess: false };
   let threadId = "";
+  // thread/start and thread/started both carry { thread: { id, ... } }.
   codex.on("thread/started", (p: unknown) => {
-    const id = firstString(p, "threadId");
+    const id = (p as { thread?: { id?: string } })?.thread?.id;
     if (id) threadId = id;
   });
   try {
     if (recovery.resume.mode === "resume" && recovery.resume.threadId) {
-      const rr = (await codex.resumeThread({ threadId: recovery.resume.threadId })) as { threadId?: string };
-      threadId = rr?.threadId ?? recovery.resume.threadId;
+      const rr = (await codex.resumeThread({ threadId: recovery.resume.threadId })) as { thread?: { id?: string } };
+      threadId = rr?.thread?.id ?? recovery.resume.threadId;
       log("RESUMED thread " + threadId);
     } else {
       throw new Error("no thread to resume");
     }
   } catch {
-    const ts = (await codex.startThread({ cwd: DEFAULT_WORKSPACE.cwd, approvalPolicy: "on-request", sandbox: "read-only" })) as { threadId?: string };
-    threadId = ts.threadId ?? threadId;
-    if (!threadId) await sleep(1500);
-    log("STARTED thread " + (threadId || "(via event)"));
+    const ts = (await codex.startThread({ cwd: DEFAULT_WORKSPACE.cwd, approvalPolicy: "on-request", sandbox: "read-only" })) as { thread?: { id?: string } };
+    threadId = ts.thread?.id ?? threadId;
+    for (let i = 0; i < 20 && !threadId; i++) await sleep(250); // await thread/started event
+    log("STARTED thread " + (threadId || "(none)"));
   }
-  if (threadId) saveResidentThread(store, threadId, now());
+  if (!threadId) { log("fatal: no threadId after start/resume"); codex.stop(); process.exit(1); }
+  saveResidentThread(store, threadId, now());
 
   // Teams host + CDP + event-driven inbox.
   const cp = spawn(electronPath, [hostCjs, "--show", "--port", PORT, "--url", "https://teams.microsoft.com/"], { stdio: ["ignore", "pipe", "pipe"] });
