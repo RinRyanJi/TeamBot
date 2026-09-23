@@ -1,0 +1,6 @@
+# REAL electron + CDP: MutationObserver pushes new messages, dedupes existing ids
+ok 1 - MutationObserver pushes new messages over CDP; dedupes existing ids
+# tests 1
+# pass 1
+# fail 0
+# skipped 0

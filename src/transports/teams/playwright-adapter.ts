@@ -122,6 +122,53 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
     return this.boundChatId;
   }
 
+  /**
+   * Event-driven inbox (product-brainstorm roadmap E): install a MutationObserver in the
+   * page that pushes NEW messages to the host as they appear, instead of polling. Baseline
+   * messages are seeded as "seen" so only genuinely new ones fire; a Set dedupes by id.
+   * The observer script is a string so the project needs no DOM lib types.
+   */
+  async watchMessages(onMessage: (m: TeamsMessage) => void): Promise<void> {
+    const page = this.requirePage();
+    const chatId = this.boundChatId;
+    await page.exposeBinding(
+      "__teambotPush",
+      (_src, raw: { messageId: string; senderId: string; text: string }) => {
+        onMessage({ chatId, ...raw });
+      },
+    );
+    const p = this.profile;
+    const script = `(() => {
+      var w = window;
+      if (w.__teambotObserving) return;
+      w.__teambotObserving = true;
+      var MID = ${JSON.stringify(p.messageIdAttr)};
+      var SENDER = ${JSON.stringify(p.senderAttr)};
+      var MSG = ${JSON.stringify(p.messageSelector)};
+      var seen = new Set();
+      var read = function (el) {
+        var id = el.getAttribute(MID);
+        if (!id || seen.has(id)) return;
+        seen.add(id);
+        var s = el.getAttribute(SENDER);
+        if (!s) { var inner = el.querySelector('[' + SENDER + ']'); s = inner ? inner.getAttribute(SENDER) : ''; }
+        w.__teambotPush({ messageId: id, senderId: s || '', text: (el.textContent || '').trim() });
+      };
+      document.querySelectorAll(MSG).forEach(function (el) { var id = el.getAttribute(MID); if (id) seen.add(id); });
+      var obs = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          m.addedNodes.forEach(function (n) {
+            if (n.nodeType !== 1) return;
+            if (n.matches && n.matches(MSG)) read(n);
+            if (n.querySelectorAll) n.querySelectorAll(MSG).forEach(read);
+          });
+        });
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    })()`;
+    await page.evaluate(script);
+  }
+
   async readMessages(): Promise<TeamsMessage[]> {
     const page = this.requirePage();
     const chatId = this.boundChatId;

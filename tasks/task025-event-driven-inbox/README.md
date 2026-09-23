@@ -2,7 +2,7 @@
 
 - Phase: 3
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,15 @@ Integration test (real browser/electron): injecting a new message node triggers 
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed. `PlaywrightTeamsAdapter.watchMessages(onMessage)` installs a **MutationObserver**
+in the app-owned page (via `page.exposeBinding("__teambotPush", …)` + an observer script
+built as a string, so no DOM lib types are needed). Baseline messages are seeded as "seen";
+only genuinely new `[data-mid]` nodes fire, deduped by a Set. The existing `readMessages`
+remains as a slow-poll safety net.
+
+Real verification (`evidence/event-inbox-test.txt`): a **real Electron host over CDP** —
+after `watchMessages`, injecting a new message node pushed exactly one event with the new
+id + sender + text; re-injecting a node with an existing baseline id was **deduped** (not
+pushed). Ran live, `skipped 0`. Full suite green.
+
+Commit: recorded on push (see git log).
