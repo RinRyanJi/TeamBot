@@ -4,6 +4,8 @@ release/
 artifacts/
 # Bulky generated JSON schema; TS bindings are committed instead. Regenerate with scripts/gen-codex-schema.mjs
 src/codex/schema/json/
+# Live Phase-0 probe outputs may contain real chat/sender ids — never commit (privacy, arch §8)
+tasks/**/results/
 .local/
 *.log
 .env
