@@ -1,0 +1,8 @@
+# multi-task scheduler + worktree allocator
+ok 1 - worktree allocator gives unique isolated paths and releases
+ok 2 - default single-thread scheduler runs one at a time (resident behavior)
+ok 3 - multi-thread: different projects run in parallel with distinct worktrees
+ok 4 - same project never runs concurrently even above the cap
+# tests 4
+# pass 4
+# fail 0

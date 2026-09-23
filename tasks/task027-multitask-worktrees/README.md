@@ -2,7 +2,7 @@
 
 - Phase: post
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,15 @@ Unit tests: worktree allocator assigns isolated dirs; scheduler runs different p
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed (opt-in; default single-thread unchanged). `src/supervisor/worktrees.ts`:
+`WorktreeAllocator` assigns unique isolated paths (`<root>\.worktrees\<jobId>`) + release;
+`MultiTaskScheduler(worktreeRoot, maxConcurrent=1)` combines `JobQueue` (cap + per-project
+lock) with worktree allocation — `startNext` activates an eligible job and allocates its
+worktree, `finish` releases both. (Creating/removing the actual `git worktree` at the path
+is a runtime step for the caller.)
+
+Real verification (`evidence/multitask-test.txt`): 4/4 — allocator uniqueness + release;
+default cap=1 serial (resident behavior preserved); cap=2 different projects run in parallel
+with distinct worktrees; same project never concurrent even above the cap. Full suite green.
+
+Commit: recorded on push (see git log).
