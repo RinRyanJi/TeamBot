@@ -1,0 +1,20 @@
+# Unit test (fake server): full lifecycle + interrupt + error/exit
+TAP version 13
+# Subtest: initialize handshake resolves with server info
+ok 1 - initialize handshake resolves with server info
+# Subtest: thread + turn lifecycle emits ordered events
+ok 2 - thread + turn lifecycle emits ordered events
+# Subtest: interrupt is honored and produces a terminal event
+ok 3 - interrupt is honored and produces a terminal event
+# Subtest: server error response rejects the request
+ok 4 - server error response rejects the request
+# Subtest: process exit rejects in-flight requests
+ok 5 - process exit rejects in-flight requests
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

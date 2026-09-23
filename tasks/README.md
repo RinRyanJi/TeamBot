@@ -13,7 +13,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task004 | 1 | local | [Inbox dedup and pairing baseline](task004-inbox-dedup/README.md) | DONE |
 | task005 | 1 | local | [!tb command parser and ID naming (T/A/Q)](task005-command-parser/README.md) | DONE |
 | task006 | 1 | local | [Router: identity check, allowlist, per-conversation binding, permission table](task006-router-authz/README.md) | DONE |
-| task007 | 0/1 | local | [Codex app-server stdio adapter (initialize/thread/turn/steer/interrupt)](task007-codex-adapter/README.md) | pending |
+| task007 | 0/1 | local | [Codex app-server stdio adapter (initialize/thread/turn/steer/interrupt)](task007-codex-adapter/README.md) | DONE |
 | task008 | 2 | local | [Supervisor: job state machine, single active turn, queue, project lock](task008-supervisor-statemachine/README.md) | pending |
 | task009 | 2 | local | [Progress coalescing and transactional outbox](task009-progress-outbox/README.md) | pending |
 | task010 | 0/1 | local | [Playwright Teams adapter against a local fixture page](task010-teams-adapter-fixture/README.md) | pending |

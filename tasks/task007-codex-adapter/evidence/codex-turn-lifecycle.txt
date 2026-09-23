@@ -1,0 +1,13 @@
+# REAL codex app-server integration (codex-cli codex-cli 0.156.1):
+# ran live, NOT skipped -> proves real protocol handshake
+TAP version 13
+# Subtest: real codex app-server: initialize handshake round-trip
+ok 1 - real codex app-server: initialize handshake round-trip
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
