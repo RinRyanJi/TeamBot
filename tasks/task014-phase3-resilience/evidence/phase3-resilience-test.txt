@@ -1,0 +1,18 @@
+# cmd: node --test tests/recovery.test.ts
+TAP version 13
+# Subtest: restart does not re-run history (dedup persists across reopen)
+ok 1 - restart does not re-run history (dedup persists across reopen)
+# Subtest: in-flight jobs are marked 'unknown' on restart, not re-run
+ok 2 - in-flight jobs are marked 'unknown' on restart, not re-run
+# Subtest: offline result is retained in outbox and reconciled on reconnect
+ok 3 - offline result is retained in outbox and reconciled on reconnect
+# Subtest: offline gap notice names the window
+ok 4 - offline gap notice names the window
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

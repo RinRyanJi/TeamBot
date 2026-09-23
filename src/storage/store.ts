@@ -233,6 +233,13 @@ export class Store {
     };
   }
 
+  listJobIds(): string[] {
+    const rows = this.db
+      .prepare("SELECT jobId FROM jobs ORDER BY createdAt")
+      .all() as Array<{ jobId: string }>;
+    return rows.map((r) => r.jobId);
+  }
+
   updateJobStatus(jobId: string, status: string, lastResult?: string): void {
     this.db
       .prepare(

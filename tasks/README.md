@@ -20,7 +20,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task011 | 1 | local | [Electron Browser Host (isolated Teams WebContentsView)](task011-electron-browser-host/README.md) | pending |
 | task012 | 1 | local | [Phase 1 end-to-end: help/projects/run/status/result with fixtures](task012-phase1-roundtrip/README.md) | DONE |
 | task013 | 2 | local | [Phase 2 interactive control: continue/steer/stop/approve/deny/answer](task013-phase2-interactive/README.md) | DONE |
-| task014 | 3 | local | [Phase 3 restart/reconnect/checkpoint recovery](task014-phase3-resilience/README.md) | pending |
+| task014 | 3 | local | [Phase 3 restart/reconnect/checkpoint recovery](task014-phase3-resilience/README.md) | DONE |
 | task015 | 3 | local | [Data retention/deletion and secret hygiene (arch §8)](task015-retention-privacy/README.md) | pending |
 | task016 | 3 | local | [Desktop console: project registration, pairing, status page, tray, explicit quit](task016-desktop-console/README.md) | pending |
 | task017 | 3 | local | [Windows install package, settings docs, redacted diagnostics export](task017-windows-installer/README.md) | pending |
