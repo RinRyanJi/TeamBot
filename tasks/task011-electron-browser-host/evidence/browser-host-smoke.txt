@@ -1,0 +1,11 @@
+# REAL Electron smoke: isolated WebContentsView, remote page has NO node integration
+# electron v44.4.5
+SMOKE_RESULT {"requireType":"undefined","moduleType":"undefined","processType":"undefined","chatId":"fixture-chat-1","isolated":true}
+# electron exit: 0
+
+# wrapped test (ran live, skipped 0):
+ok 1 - electron browser host: remote page is isolated (no node integration)
+# tests 1
+# pass 1
+# fail 0
+# skipped 0

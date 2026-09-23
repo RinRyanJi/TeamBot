@@ -1,0 +1,18 @@
+# Browser host security config unit tests
+TAP version 13
+# Subtest: remote web preferences are locked down (no node, no preload, sandboxed)
+ok 1 - remote web preferences are locked down (no node, no preload, sandboxed)
+# Subtest: assertRemoteIsIsolated rejects unsafe configs
+ok 2 - assertRemoteIsIsolated rejects unsafe configs
+# Subtest: partitions are persistent and share the login partition across chats
+ok 3 - partitions are persistent and share the login partition across chats
+# Subtest: control endpoint host must be loopback only
+ok 4 - control endpoint host must be loopback only
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
