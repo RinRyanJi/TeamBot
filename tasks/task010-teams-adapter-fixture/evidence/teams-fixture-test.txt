@@ -1,0 +1,13 @@
+# REAL browser (Chrome via playwright-core) vs local Teams DOM fixture
+# ran live, NOT skipped -> proves real DOM read/send/reconcile + single-writer
+TAP version 13
+# Subtest: playwright teams adapter: read ids, send, reconcile, single-writer
+ok 1 - playwright teams adapter: read ids, send, reconcile, single-writer
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

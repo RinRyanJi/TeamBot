@@ -16,7 +16,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task007 | 0/1 | local | [Codex app-server stdio adapter (initialize/thread/turn/steer/interrupt)](task007-codex-adapter/README.md) | DONE |
 | task008 | 2 | local | [Supervisor: job state machine, single active turn, queue, project lock](task008-supervisor-statemachine/README.md) | DONE |
 | task009 | 2 | local | [Progress coalescing and transactional outbox](task009-progress-outbox/README.md) | DONE |
-| task010 | 0/1 | local | [Playwright Teams adapter against a local fixture page](task010-teams-adapter-fixture/README.md) | pending |
+| task010 | 0/1 | local | [Playwright Teams adapter against a local fixture page](task010-teams-adapter-fixture/README.md) | DONE |
 | task011 | 1 | local | [Electron Browser Host (isolated Teams WebContentsView)](task011-electron-browser-host/README.md) | pending |
 | task012 | 1 | local | [Phase 1 end-to-end: help/projects/run/status/result with fixtures](task012-phase1-roundtrip/README.md) | pending |
 | task013 | 2 | local | [Phase 2 interactive control: continue/steer/stop/approve/deny/answer](task013-phase2-interactive/README.md) | pending |

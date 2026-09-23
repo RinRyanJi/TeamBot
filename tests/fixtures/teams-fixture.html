@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Teams DOM fixture</title>
+  </head>
+  <!-- Emulates the stable identifiers TeamBot needs from a Teams conversation:
+       a chat id on the container, and per-message message-id + sender-id.
+       Sending appends a message authored by the local account. -->
+  <body>
+    <main id="chat" data-chat-id="fixture-chat-1">
+      <ul id="messages">
+        <li class="msg" data-message-id="m1" data-sender-id="u-alice">!tb run TeamBot check login</li>
+        <li class="msg" data-message-id="m2" data-sender-id="u-bob">looks good</li>
+      </ul>
+      <input id="composer" type="text" />
+      <button id="send">Send</button>
+    </main>
+    <script>
+      (function () {
+        var seq = 100;
+        var ME = "me@fixture";
+        document.getElementById("send").addEventListener("click", function () {
+          var input = document.getElementById("composer");
+          var text = input.value;
+          if (!text) return;
+          seq += 1;
+          var li = document.createElement("li");
+          li.className = "msg";
+          li.setAttribute("data-message-id", "s" + seq);
+          li.setAttribute("data-sender-id", ME);
+          li.textContent = text;
+          document.getElementById("messages").appendChild(li);
+          input.value = "";
+        });
+      })();
+    </script>
+  </body>
+</html>
