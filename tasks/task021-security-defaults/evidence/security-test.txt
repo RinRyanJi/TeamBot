@@ -1,0 +1,10 @@
+# security core (policy/guards/redaction)
+ok 1 - policy defaults to read-only
+ok 2 - unlock opens workspace-write until expiry, then reverts
+ok 3 - lock reverts immediately; kill forces read-only permanently
+ok 4 - isPathAllowed confines writes to the workspace root
+ok 5 - classifyDanger / isAlwaysApprove flag risky operations
+ok 6 - outbound redaction scrubs tokens (defense for status/result streaming)
+# tests 6
+# pass 6
+# fail 0

@@ -15,6 +15,8 @@ import { PlaywrightTeamsAdapter } from "../src/transports/teams/playwright-adapt
 import { CodexAdapter } from "../src/codex/adapter.ts";
 import { parseWithImplicitRun, REPORT_PREFIX } from "../src/router/parser.ts";
 import { ensureWorkspace, DEFAULT_WORKSPACE, DEFAULT_PROJECT_ID } from "../src/app/defaults.ts";
+import { SecurityPolicy } from "../src/security/policy.ts";
+import { redactString } from "../src/util/redact.ts";
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -56,6 +58,20 @@ async function main(): Promise<void> {
     const id = (p as { threadId?: string })?.threadId;
     if (id) threadId = id;
   });
+
+  // Default posture: read-only. `!tb unlock <min>` opens workspace-write (writes confined
+  // to AgentHub, network denied) until it expires; `!tb lock` reverts; `!tb kill` stops.
+  const policy = new SecurityPolicy("read-only");
+  const sandboxPolicyFor = (now: number) =>
+    policy.effectiveSandbox(now) === "workspace-write"
+      ? {
+          type: "workspaceWrite",
+          writableRoots: [DEFAULT_WORKSPACE.cwd],
+          networkAccess: false,
+          excludeTmpdirEnvVar: false,
+          excludeSlashTmp: false,
+        }
+      : { type: "readOnly", networkAccess: false };
 
   // Per-turn state (single active turn at a time on the resident thread).
   let activeJobId = "";
@@ -143,7 +159,22 @@ async function main(): Promise<void> {
       }
       const c = parsed.command;
 
-      if (c.kind === "run") {
+      if (c.kind === "kill") {
+        policy.kill();
+        codex.stop();
+        await teams.sendMessage(`[TB] 已停止(kill)。session 結束。`);
+        log("killed by user");
+        await teams.close().catch(() => undefined);
+        cp.kill();
+        process.exit(0);
+      } else if (c.kind === "lock") {
+        policy.lock();
+        await teams.sendMessage(`[TB] 已鎖回 read-only(僅檢視,不寫檔)。`);
+      } else if (c.kind === "unlock") {
+        policy.unlock(c.minutes * 60_000, Date.now());
+        await teams.sendMessage(`[TB] 已解鎖 workspace-write ${c.minutes} 分鐘(寫入限 AgentHub、拒網路)。`);
+      } else if (c.kind === "run") {
+        if (policy.isKilled()) continue;
         if (activeJobId) {
           await teams.sendMessage(`[TB ${activeJobId}] 忙碌中,前一項還在執行,請稍後再送。`);
           continue;
@@ -151,11 +182,13 @@ async function main(): Promise<void> {
         activeJobId = "T" + String(Date.now()).slice(-4);
         turnSettled = false;
         texts = [];
-        log(`turn: ${c.request}`);
-        await teams.sendMessage(`[TB ${activeJobId}] 收到(AgentHub):${c.request}`);
+        const mode = policy.effectiveSandbox(Date.now());
+        log(`turn (${mode}): ${c.request}`);
+        await teams.sendMessage(`[TB ${activeJobId}] 收到(AgentHub · ${mode}):${c.request}`);
         await codex.startTurn({
           threadId,
           input: [{ type: "text", text: c.request, text_elements: [] }],
+          sandboxPolicy: sandboxPolicyFor(Date.now()),
         });
       } else if (c.kind === "approve" || c.kind === "deny") {
         const p = pending.get(c.code);
@@ -172,7 +205,9 @@ async function main(): Promise<void> {
     }
 
     if (turnSettled && activeJobId) {
-      const summary = texts.length ? texts[texts.length - 1]!.slice(0, 1400) : "(無文字輸出)";
+      // Redact any secrets/tokens from Codex output before posting to Teams.
+      const raw = texts.length ? texts[texts.length - 1]!.slice(0, 1400) : "(無文字輸出)";
+      const summary = redactString(raw);
       await teams.sendMessage(`[TB ${activeJobId}] 已完成:\n${summary}`);
       log("result sent for " + activeJobId);
       activeJobId = ""; // ready for the next message; session stays resident

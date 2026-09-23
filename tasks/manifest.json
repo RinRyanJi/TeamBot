@@ -140,6 +140,13 @@
       "spec": "Establish a default personal-assistant workspace at D:\\AgentHub and register it as the default project so !tb has a default startup folder. Ensure the folder exists; register a normalized absolute cwd.",
       "acceptance": "Tests: default workspace constant points to an absolute D:\\AgentHub; registerDefaults registers it in the ProjectRegistry; ensureWorkspace creates the folder; folder exists on disk.",
       "evidence": ["defaults-test.txt", "workspace-listing.txt"]
+    },
+    {
+      "id": "task021", "slug": "security-defaults", "phase": "2", "env": "local",
+      "title": "Security defaults: switchable read-only posture, path allow-list, always-approve, redaction",
+      "spec": "Roadmap A from product-brainstorm. Default execution posture read-only; !tb unlock <duration> switches to workspace-write until expiry; !tb lock relocks; !tb kill hard-stops. Path allow-list confines writes to AgentHub (canonicalized; reject .., UNC, symlink escape, absolute-outside). always-approve classifier flags destructive/network/secret/elevation ops. Redact outbound Teams messages. Wire posture + commands into the resident runner.",
+      "acceptance": "Unit tests: SecurityPolicy default read-only, unlock opens workspace-write until expiry then reverts, lock relocks; isPathAllowed confines to root; isAlwaysApprove flags destructive/network/secret/elevation; outbound redaction scrubs tokens. Parser recognizes unlock/lock/kill. Full suite green.",
+      "evidence": ["security-test.txt", "parser-security-test.txt"]
     }
   ]
 }

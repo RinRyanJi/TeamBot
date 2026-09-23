@@ -29,7 +29,10 @@ export type Command =
   | { kind: "approve"; code: string }
   | { kind: "deny"; code: string }
   | { kind: "answer"; questionId: string; text: string }
-  | { kind: "result"; jobId: string };
+  | { kind: "result"; jobId: string }
+  | { kind: "kill" }
+  | { kind: "lock" }
+  | { kind: "unlock"; minutes: number };
 
 export type ParseResult =
   | { ok: true; command: Command }
@@ -69,6 +72,16 @@ export function parseCommand(raw: string): ParseResult {
       return { ok: true, command: { kind: "help" } };
     case "projects":
       return { ok: true, command: { kind: "projects" } };
+    case "kill":
+      return { ok: true, command: { kind: "kill" } };
+    case "lock":
+      return { ok: true, command: { kind: "lock" } };
+    case "unlock": {
+      // Optional duration in minutes; default 30.
+      const raw = rest[0];
+      const minutes = raw && /^\d+$/.test(raw) ? Number(raw) : 30;
+      return { ok: true, command: { kind: "unlock", minutes } };
+    }
 
     case "run": {
       const projectId = rest[0];

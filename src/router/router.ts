@@ -58,6 +58,12 @@ export function authorize(command: Command, ctx: RouteContext): AuthDecision {
     case "projects":
       return { allow: true };
 
+    // Session/security control — allowlisted sender (owner) only; already gated above.
+    case "kill":
+    case "lock":
+    case "unlock":
+      return { allow: true };
+
     case "run": {
       if (!ctx.pairing.projects.includes(command.projectId)) {
         return { allow: false, reason: "project-not-authorized" };

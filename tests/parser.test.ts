@@ -123,6 +123,19 @@ test("parseWithImplicitRun: !tb <free text> becomes a run in the default project
   });
 });
 
+test("security commands: kill / lock / unlock [minutes]", () => {
+  assert.deepEqual(parseCommand("!tb kill"), { ok: true, command: { kind: "kill" } });
+  assert.deepEqual(parseCommand("@tb lock"), { ok: true, command: { kind: "lock" } });
+  assert.deepEqual(parseCommand("!tb unlock"), {
+    ok: true,
+    command: { kind: "unlock", minutes: 30 },
+  });
+  assert.deepEqual(parseCommand("!tb unlock 15"), {
+    ok: true,
+    command: { kind: "unlock", minutes: 15 },
+  });
+});
+
 test("malformed commands are rejected with reasons", () => {
   assert.deepEqual(parseCommand("!tb"), { ok: false, reason: "unknown-command" });
   assert.deepEqual(parseCommand("!tb frobnicate T1"), {
