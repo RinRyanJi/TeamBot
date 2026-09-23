@@ -1,0 +1,30 @@
+# Approval security + turn control (steer/stop/answer)
+TAP version 13
+# Subtest: unknown code is rejected
+ok 1 - unknown code is rejected
+# Subtest: wrong conversation is rejected and does not affect the turn
+ok 2 - wrong conversation is rejected and does not affect the turn
+# Subtest: non-initiator non-admin is rejected
+ok 3 - non-initiator non-admin is rejected
+# Subtest: admin may resolve even if not initiator
+ok 4 - admin may resolve even if not initiator
+# Subtest: initiator approves; second attempt is rejected as used (one-time)
+ok 5 - initiator approves; second attempt is rejected as used (one-time)
+# Subtest: expired approval is rejected and marked expired
+ok 6 - expired approval is rejected and marked expired
+# Subtest: dangerous scope in a group routes approval to self-chat; safe stays in place
+ok 7 - dangerous scope in a group routes approval to self-chat; safe stays in place
+# Subtest: stop: request marks 'stopping'; 'cancelled' only after the turn actually ends
+ok 8 - stop: request marks 'stopping'; 'cancelled' only after the turn actually ends
+# Subtest: mid-run steer is delivered and shapes the completion
+ok 9 - mid-run steer is delivered and shapes the completion
+# Subtest: answer resolves a mid-run input request and lets the turn complete
+ok 10 - answer resolves a mid-run input request and lets the turn complete
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
