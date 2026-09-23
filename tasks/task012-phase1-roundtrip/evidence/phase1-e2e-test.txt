@@ -1,0 +1,18 @@
+# cmd: node --test tests/phase1-e2e.test.ts (inbox->router->supervisor->codex->outbox->transport)
+TAP version 13
+# Subtest: one run message creates exactly one job, runs in the project, returns result
+ok 1 - one run message creates exactly one job, runs in the project, returns result
+# Subtest: status and result are answered from stored state (no model run)
+ok 2 - status and result are answered from stored state (no model run)
+# Subtest: duplicate run message does not create a second job
+ok 3 - duplicate run message does not create a second job
+# Subtest: unregistered project is refused by authorization (no Codex start)
+ok 4 - unregistered project is refused by authorization (no Codex start)
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
