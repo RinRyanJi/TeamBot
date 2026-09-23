@@ -1,0 +1,12 @@
+# Phase 0 harness SELF-CHECK (real electron, local fixture) — proves extraction logic
+# LIVE tenant/stable-id/push run is USER-RUN (see harness/README.md); agent cannot self-verify per AGENTS.md
+
+PHASE0_PROBE {"url":"file:///D:/workspace/GitBank/GitRin/TeamBot/tests/fixtures/teams-fixture.html","title":"Teams DOM fixture","chatId":"fixture-chat-1","messages":[{"messageId":"m1","senderId":"u-alice","hasText":true},{"messageId":"m2","senderId":"u-bob","hasText":true}],"stableChatId":true,"stableMessageIds":true,"stableSenderIds":true,"strategies":[{"name":"data-attributes","chatId":"fixture-chat-1","messageCount":2}]}
+# exit: 0
+
+# wrapped test:
+ok 1 - phase0 harness --selfcheck extracts stable ids from the isolated surface
+# tests 1
+# pass 1
+# fail 0
+# skipped 0

@@ -2,7 +2,7 @@
 
 - Phase: 0
 - Env: live (requires user's real Teams tenant/phone)
-- Status: pending
+- Status: HARNESS-DONE (live run: user)
 
 ## Spec
 
@@ -19,4 +19,21 @@ User executes the harness and records results in evidence/results.md (go/no-go +
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Harness delivered and self-verified; the LIVE tenant/push run is inherently user-run.
+- `evidence/harness/phase0-live.cjs` — Electron harness that opens the app-owned isolated
+  Teams surface. Real mode → `https://teams.microsoft.com` (visible; you log in), re-probes
+  every 5s, writes `results/phase0-results.json`. `--selfcheck` mode → local fixture.
+- `evidence/harness/README.md` — step-by-step live checklist.
+- `evidence/results-template.md` — capability matrix + go/no-go with fallbacks.
+
+Real verification of the harness itself (`evidence/selfcheck.txt`): **real Electron**
+ran `phase0-live.cjs --selfcheck` and its probe extracted `stableChatId/stableMessageIds/
+stableSenderIds = true` from the isolated surface (exit 0); wrapped test 1/1, skipped 0.
+
+**Not self-verifiable by the agent (by design):** real tenant login / conditional access,
+stable IDs on the *real* Teams DOM, dual-surface background updates, reply targeting, and
+same-account phone push — these require the user's live tenant + phone, and AGENTS.md
+forbids sending real Teams messages as incidental verification. Run the harness per its
+README and record go/no-go in `results-template.md`.
+
+Commit: recorded on push (see git log).
