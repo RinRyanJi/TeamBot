@@ -71,6 +71,8 @@ flowchart TD
 
 上文的 JSON-RPC 方法名（`initialize`、`thread/start`、`thread/resume`、`turn/start`、`turn/steer`、`turn/interrupt`）與事件名為預期值，非契約保證。Phase 0 必須以釘選版本產生的 schema 實測方法名與事件名是否完全一致；若實際名稱或欄位不同，以 schema 為準修正本文件,不以此處字面硬編實作。
 
+**已驗證（task002，codex-cli 0.156.1）。** 以 `codex app-server generate-ts` 產生的 schema 實測,上述方法名與 `initialized` 通知全部存在。驅動工作狀態的伺服器事件確認為 `thread/started`、`turn/started`、`turn/completed`、`item/started`、`item/completed`;批准與輸入請求為 `item/commandExecution/requestApproval`、`item/fileChange/requestApproval`、`item/permissions/requestApproval` 與 `item/tool/requestUserInput`。這些名稱由 `src/codex/protocol-names.ts` 集中管理,並由 `tests/codex-protocol-names.test.ts` 對已提交的 schema 產物持續驗證;codex 升級若改名會使測試失敗,而非執行期才爆。schema 以 `scripts/gen-codex-schema.mjs` 重新產生(TS bindings 已提交,JSON schema 較大故 gitignore)。
+
 ### 介接選項比較
 
 | 方法 | 適合用途 | 本計畫定位 |

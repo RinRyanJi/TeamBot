@@ -1,0 +1,19 @@
+# cmd: node --test protocol-names test only
+ok 2 - every required protocol name is present in the generated schema
+  ---
+  duration_ms: 451.0976
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 846.065
+
+# Non-vacuous check: a bogus name must NOT be found in the schema corpus:
+turn/steer present: true
+turn/BOGUS present: false

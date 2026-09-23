@@ -8,7 +8,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | ID | Phase | Env | Task | Status |
 |---|---|---|---|---|
 | task001 | 1 | local | [Node + TypeScript project scaffold with build/typecheck/test harness](task001-project-scaffold/README.md) | DONE |
-| task002 | 0 | local | [Pin & generate Codex app-server protocol schema; verify method/event names](task002-codex-schema-pin/README.md) | pending |
+| task002 | 0 | local | [Pin & generate Codex app-server protocol schema; verify method/event names](task002-codex-schema-pin/README.md) | DONE |
 | task003 | 1 | local | [SQLite storage layer (inbox, outbox, jobs, approvals) with migrations](task003-storage-layer/README.md) | pending |
 | task004 | 1 | local | [Inbox dedup and pairing baseline](task004-inbox-dedup/README.md) | pending |
 | task005 | 1 | local | [!tb command parser and ID naming (T/A/Q)](task005-command-parser/README.md) | pending |

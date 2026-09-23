@@ -1,0 +1,2 @@
+# codex --version
+codex-cli 0.156.1

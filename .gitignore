@@ -2,6 +2,8 @@ node_modules/
 dist/
 release/
 artifacts/
+# Bulky generated JSON schema; TS bindings are committed instead. Regenerate with scripts/gen-codex-schema.mjs
+src/codex/schema/json/
 .local/
 *.log
 .env

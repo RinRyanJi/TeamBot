@@ -1,0 +1,23 @@
+# Generated with: codex app-server generate-ts --out src/codex/schema/ts
+# and: codex app-server generate-json-schema --out src/codex/schema/json
+# ts files:
+96
+# json files:
+39
+# grep proof the required names exist in generated schema:
+"initialize"
+"initialized"
+"item/commandExecution/requestApproval"
+"item/completed"
+"item/fileChange/requestApproval"
+"item/permissions/requestApproval"
+"item/started"
+"item/tool/requestUserInput"
+"thread/resume"
+"thread/start"
+"thread/started"
+"turn/completed"
+"turn/interrupt"
+"turn/start"
+"turn/started"
+"turn/steer"
