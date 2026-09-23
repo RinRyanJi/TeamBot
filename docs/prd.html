@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TeamBot PRD v2 — 視覺版</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --line:#30363d; --ink:#e6edf3; --dim:#9da7b3;
+    --accent:#ea580c; --accent2:#26a5e4; --ok:#3fb950; --warn:#d29922; --danger:#f85149;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,"Microsoft JhengHei",sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;margin:0 0 4px}
+  h2{font-size:20px;margin:34px 0 12px;border-left:4px solid var(--accent);padding-left:10px}
+  .sub{color:var(--dim);margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h3{margin:0 0 8px;font-size:15px;color:var(--accent2)}
+  .card p,.card li{color:var(--dim);font-size:14px;margin:4px 0}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#1c2330;color:var(--ink)}
+  td{color:var(--dim)}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .done{background:rgba(63,185,80,.15);color:var(--ok)}
+  .plan{background:rgba(210,153,34,.15);color:var(--warn)}
+  code{background:#1c2330;padding:1px 6px;border-radius:5px;color:#e6edf3;font-size:13px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:13px;margin:6px 0 0}
+  .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:5px}
+  svg{width:100%;height:auto;display:block;background:#0b0f14;border:1px solid var(--line);border-radius:12px}
+  .foot{color:var(--dim);font-size:12.5px;margin-top:30px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🤖 TeamBot — 產品需求 (PRD v2)</h1>
+  <p class="sub">用手機 Microsoft Teams 遠端操作電腦上的<strong>常駐 Codex CLI</strong>:交辦、看進度、做決策、取回結果。借鏡開源 <code>telecodex</code>(Telegram↔Codex)。2026-09-24</p>
+
+  <div class="grid">
+    <div class="card"><h3>核心價值</h3>
+      <p>離開電腦也能用手機交辦與監控本機 Codex;常駐工作階段保留對話上下文,危險操作需你批准。</p></div>
+    <div class="card"><h3>資料區</h3>
+      <p><code>D:\AgentHub</code> 為個人助理工作區(projects / data / logs);寫入預設限縮於此。</p></div>
+  </div>
+
+  <h2>系統架構</h2>
+  <div class="legend">
+    <span><span class="swatch" style="background:#26a5e4"></span>Teams / 傳輸</span>
+    <span><span class="swatch" style="background:#ea580c"></span>TeamBot 服務</span>
+    <span><span class="swatch" style="background:#3fb950"></span>Codex / 檔案</span>
+    <span><span class="swatch" style="background:#f85149"></span>安全關卡</span>
+  </div>
+  <svg viewBox="0 0 960 470" role="img" aria-label="TeamBot architecture">
+    <defs>
+      <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#8b949e"/>
+      </marker>
+      <style>
+        .b{rx:12;ry:12;stroke-width:1.5}
+        .t{fill:#e6edf3;font:600 15px "Segoe UI",sans-serif}
+        .s{fill:#9da7b3;font:12px "Segoe UI",sans-serif}
+        .lbl{fill:#8b949e;font:italic 12px "Segoe UI",sans-serif}
+        .flow{stroke:#8b949e;stroke-width:1.6;fill:none;marker-end:url(#arr)}
+      </style>
+    </defs>
+
+    <!-- phone -->
+    <rect class="b" x="360" y="16" width="240" height="46" fill="#0b2b3a" stroke="#26a5e4"/>
+    <text class="t" x="480" y="38" text-anchor="middle">📱 手機 Microsoft Teams</text>
+    <text class="s" x="480" y="54" text-anchor="middle">!tb / @tb 指令 · 收進度與結果</text>
+
+    <!-- cloud -->
+    <rect class="b" x="360" y="86" width="240" height="40" fill="#0b2b3a" stroke="#26a5e4"/>
+    <text class="t" x="480" y="111" text-anchor="middle">☁️ Teams 雲端</text>
+
+    <!-- electron surface -->
+    <rect class="b" x="320" y="150" width="320" height="52" fill="#0b2b3a" stroke="#26a5e4"/>
+    <text class="t" x="480" y="172" text-anchor="middle">🖥️ Electron 自有 Teams 表面</text>
+    <text class="s" x="480" y="189" text-anchor="middle">隔離 WebContentsView · 無 Node · 持久登入</text>
+
+    <!-- teambot service -->
+    <rect class="b" x="150" y="226" width="660" height="96" fill="#2b1608" stroke="#ea580c"/>
+    <text class="t" x="480" y="248" text-anchor="middle">⚙️ TeamBot 常駐服務</text>
+    <rect class="b" x="168" y="260" width="150" height="48" fill="#1c1206" stroke="#7a3d10"/>
+    <text class="s" x="243" y="280" text-anchor="middle">收件 / Router</text>
+    <text class="s" x="243" y="296" text-anchor="middle">授權 · 去重 · parser</text>
+    <rect class="b" x="330" y="260" width="150" height="48" fill="#1c1206" stroke="#7a3d10"/>
+    <text class="s" x="405" y="280" text-anchor="middle">Supervisor</text>
+    <text class="s" x="405" y="296" text-anchor="middle">狀態機 · 佇列 · 批准</text>
+    <rect class="b" x="492" y="260" width="150" height="48" fill="#1c1206" stroke="#7a3d10"/>
+    <text class="s" x="567" y="280" text-anchor="middle">Progress</text>
+    <text class="s" x="567" y="296" text-anchor="middle">狀態卡 · 結果彙整</text>
+    <rect class="b" x="654" y="260" width="140" height="48" fill="#2a0d0d" stroke="#f85149"/>
+    <text class="s" x="724" y="280" text-anchor="middle" fill="#f0a0a0">Security</text>
+    <text class="s" x="724" y="296" text-anchor="middle" fill="#f0a0a0">姿態·白名單·去識別</text>
+
+    <!-- codex -->
+    <rect class="b" x="300" y="346" width="360" height="52" fill="#0c2417" stroke="#3fb950"/>
+    <text class="t" x="480" y="368" text-anchor="middle">🧠 常駐 Codex 工作階段 @ D:\AgentHub</text>
+    <text class="s" x="480" y="385" text-anchor="middle">app-server(stdio) · thread/resume 連續 · sandboxPolicy</text>
+
+    <!-- files -->
+    <rect class="b" x="340" y="418" width="280" height="40" fill="#0c2417" stroke="#3fb950"/>
+    <text class="t" x="480" y="443" text-anchor="middle">📁 專案檔案 / 指令(沙箱+批准)</text>
+
+    <!-- flows -->
+    <path class="flow" d="M480,62 L480,84"/>
+    <path class="flow" d="M480,126 L480,148"/>
+    <path class="flow" d="M480,202 L480,224"/>
+    <path class="flow" d="M480,322 L480,344"/>
+    <path class="flow" d="M480,398 L480,416"/>
+    <text class="lbl" x="500" y="218" text-anchor="start">CDP(loopback)</text>
+    <text class="lbl" x="500" y="340" text-anchor="start">stdio app-server</text>
+  </svg>
+  <p class="sub" style="margin-top:8px">電腦主動連出;手機不直接連入電腦。與 telecodex 差異:Telegram 有官方 Bot API,Teams 走 CDP 自有表面(有條款風險,長期評估 Graph/Bot Framework)。</p>
+
+  <h2>一次互動流程(含決策關卡)</h2>
+  <svg viewBox="0 0 960 380" role="img" aria-label="interaction sequence">
+    <defs>
+      <marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8b949e"/></marker>
+      <style>
+        .lane{fill:#9da7b3;font:600 13px "Segoe UI",sans-serif}
+        .msg{fill:#c9d1d9;font:12.5px "Segoe UI",sans-serif}
+        .ln{stroke:#30363d;stroke-width:1.2;stroke-dasharray:4 4}
+        .m{stroke:#8b949e;stroke-width:1.5;marker-end:url(#a2)}
+        .mok{stroke:#3fb950}
+        .mwarn{stroke:#d29922}
+      </style>
+    </defs>
+    <!-- lanes -->
+    <text class="lane" x="120" y="26" text-anchor="middle">📱 手機</text>
+    <text class="lane" x="480" y="26" text-anchor="middle">⚙️ TeamBot</text>
+    <text class="lane" x="840" y="26" text-anchor="middle">🧠 Codex@AgentHub</text>
+    <line class="ln" x1="120" y1="36" x2="120" y2="360"/>
+    <line class="ln" x1="480" y1="36" x2="480" y2="360"/>
+    <line class="ln" x1="840" y1="36" x2="840" y2="360"/>
+
+    <line class="m" x1="120" y1="64" x2="476" y2="64"/><text class="msg" x="128" y="58">!tb 修好登入並跑測試</text>
+    <line class="m mok" x1="480" y1="98" x2="124" y2="98"/><text class="msg" x="180" y="92" text-anchor="start">[TB T1] 已接收(read-only)</text>
+    <line class="m" x1="480" y1="132" x2="836" y2="132"/><text class="msg" x="836" y="126" text-anchor="end">turn/start</text>
+    <line class="m mwarn" x1="840" y1="166" x2="484" y2="166"/><text class="msg" x="836" y="160" text-anchor="end">requestApproval</text>
+    <line class="m mwarn" x1="480" y1="200" x2="124" y2="200"/><text class="msg" x="180" y="194" text-anchor="start">[TB T1] 需要批准 A1:git push…</text>
+    <line class="m" x1="120" y1="234" x2="476" y2="234"/><text class="msg" x="128" y="228">!tb approve A1</text>
+    <line class="m mok" x1="480" y1="268" x2="836" y2="268"/><text class="msg" x="836" y="262" text-anchor="end">accept</text>
+    <line class="m" x1="840" y1="302" x2="484" y2="302"/><text class="msg" x="836" y="296" text-anchor="end">turn/completed</text>
+    <line class="m mok" x1="480" y1="336" x2="124" y2="336"/><text class="msg" x="180" y="330" text-anchor="start">[TB T1] ✅ 已完成 · 3 檔 · 測試通過</text>
+  </svg>
+  <p class="sub" style="margin-top:8px">長任務期間會定期回報<strong>合併狀態卡</strong>(就地編輯、≤1/間隔、心跳);<code>!tb status</code> 隨時拉快照。</p>
+
+  <h2>指令模型</h2>
+  <table>
+    <tr><th>指令</th><th>作用</th><th>狀態</th></tr>
+    <tr><td><code>!tb &lt;自然語言&gt;</code> / <code>run</code></td><td>交辦(預設 AgentHub)</td><td><span class="pill done">已實作</span></td></tr>
+    <tr><td><code>status</code> / <code>result</code> / <code>diff</code></td><td>狀態 / 結果 / 變更</td><td><span class="pill done">status ✅</span></td></tr>
+    <tr><td><code>approve</code> / <code>deny</code> / <code>answer</code></td><td>決策(繫結代碼、逾時自動拒)</td><td><span class="pill done">已實作</span></td></tr>
+    <tr><td><code>unlock [分]</code> / <code>lock</code> / <code>kill</code></td><td>切換寫入姿態 / 硬停</td><td><span class="pill done">已實作</span></td></tr>
+    <tr><td><code>steer</code> / <code>continue</code> / <code>stop</code></td><td>中途追加 / 續輪 / 收尾停</td><td><span class="pill done">引擎✅</span></td></tr>
+    <tr><td><code>use latest</code> / <code>sessions</code> / <code>new</code></td><td>切換/開新/列出 session</td><td><span class="pill plan">規劃(借鏡)</span></td></tr>
+    <tr><td><code>login</code> / <code>logout</code></td><td>Codex 裝置登入</td><td><span class="pill plan">規劃(借鏡)</span></td></tr>
+  </table>
+
+  <h2>借鏡 telecodex 的 v2 需求</h2>
+  <div class="grid">
+    <div class="card"><h3>H · 串流回覆就地編輯</h3><p>單訊息編輯 + debounce + 分段 + 限流退避(<code>edit_debounce_ms</code> / <code>max_text_chunk</code> / <code>retry_after</code>)。</p></div>
+    <div class="card"><h3>I · 多會話 / 切換 thread</h3><p><code>use latest</code>、<code>sessions</code>、<code>new</code>;每對話一 session(topic-aware)。</p></div>
+    <div class="card"><h3>J · 附件 in/out</h3><p><code>.teambot/inbox</code> 收檔、<code>turns/out</code> 自動回傳產物。</p></div>
+    <div class="card"><h3>K · 歷史匯入 / 綁定 thread</h3><p>以 cwd 匯入 Codex 歷史;<code>use &lt;thread&gt;</code> 接既有對話。</p></div>
+    <div class="card"><h3>L · Codex 裝置登入</h3><p><code>!tb login</code>/<code>logout</code>;未登入不啟動 turn。</p></div>
+    <div class="card"><h3>N · ACL 角色 + 稽核</h3><p>allowed / admin / user + <code>audit_log</code>(現有 allowlist 擴為角色)。</p></div>
+  </div>
+
+  <h2>安全姿態(MUST)</h2>
+  <div class="grid">
+    <div class="card"><h3>預設 read-only</h3><p><code>unlock</code> 時限切 workspace-write;寫入限 AgentHub、拒網路;<code>lock</code>/<code>kill</code> + 閒置自動 suspend。</p></div>
+    <div class="card"><h3>永遠需批准</h3><p>破壞性 / 網路 / 機密 / 提權 / git 改寫;危險操作導到自己聊天。</p></div>
+    <div class="card"><h3>去識別</h3><p>對外訊息與日誌掃除 token/cookie/env;群組只給摘要。</p></div>
+    <div class="card"><h3>身分 &amp; 稽核</h3><p>不可變 sender id 授權;附加式稽核;條款風險需知情。</p></div>
+  </div>
+
+  <h2>現況</h2>
+  <p class="sub">27 個 task 完成(全套測試 <strong>136/136</strong>);已整合進常駐 runner 並於<strong>真實 Teams + 真實 Codex</strong> 實測:接收 → read-only 執行 → 彙整回報 → 批准 → 重啟 <code>thread/resume</code> 連續。Phase 0 於真實租戶 = GO(穩定 id、送出、接收、隱藏背景收訊)。</p>
+
+  <div class="foot">
+    TeamBot PRD v2 · 參考 docs/architecture.md、docs/product-brainstorm.md · 借鏡 Headcrab/telecodex(MIT)。
+    傳輸差異:Teams 走 Electron 自有表面 + CDP(條款風險,長期評估 Graph/Bot Framework)。
+  </div>
+</div>
+</body>
+</html>
