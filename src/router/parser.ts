@@ -115,3 +115,25 @@ export function parseCommand(raw: string): ParseResult {
       return { ok: false, reason: "unknown-command" };
   }
 }
+
+/**
+ * Like parseCommand, but treats `!tb <free text>` (an unrecognized subcommand) as an
+ * implicit `run` in the default project. So `!tb 創建一個 doc 資料夾` == run in AgentHub
+ * with that request. Known control commands (help/run/status/approve/...) are unchanged.
+ */
+export function parseWithImplicitRun(
+  raw: string,
+  defaultProjectId: string,
+): ParseResult {
+  const strict = parseCommand(raw);
+  if (strict.ok) return strict;
+  if (strict.reason === "unknown-command") {
+    const toks = tokens(raw.trimStart());
+    // toks[0] is the !tb prefix; the rest is the free-text request.
+    const request = toks.slice(1).join(" ").trim();
+    if (request.length > 0) {
+      return { ok: true, command: { kind: "run", projectId: defaultProjectId, request } };
+    }
+  }
+  return strict;
+}

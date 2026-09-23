@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PlaywrightTeamsAdapter } from "../src/transports/teams/playwright-adapter.ts";
 import { CodexAdapter } from "../src/codex/adapter.ts";
-import { parseCommand } from "../src/router/parser.ts";
+import { parseWithImplicitRun } from "../src/router/parser.ts";
 import { ensureWorkspace, DEFAULT_WORKSPACE, DEFAULT_PROJECT_ID } from "../src/app/defaults.ts";
 import { REPORT_PREFIX } from "../src/router/parser.ts";
 
@@ -109,7 +109,8 @@ async function main(): Promise<void> {
       const norm = m.text.replace(/！/g, "!").replace(/　/g, " ");
       const idx = norm.toLowerCase().indexOf("!tb");
       if (idx < 0) continue;
-      const parsed = parseCommand(norm.slice(idx));
+      // `!tb <free text>` (no run/project) defaults to a run in AgentHub.
+      const parsed = parseWithImplicitRun(norm.slice(idx), DEFAULT_PROJECT_ID);
       if (!parsed.ok) {
         log("  not a command: " + parsed.reason);
         continue;

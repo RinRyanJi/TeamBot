@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseCommand } from "../src/router/parser.ts";
+import { parseCommand, parseWithImplicitRun } from "../src/router/parser.ts";
 
 test("help and projects", () => {
   assert.deepEqual(parseCommand("!tb help"), { ok: true, command: { kind: "help" } });
@@ -77,6 +77,34 @@ test("a [TB ...] report line is NOT parsed as a command", () => {
 test("ordinary chat without prefix is not a command", () => {
   assert.deepEqual(parseCommand("繼續 T001 吧"), { ok: false, reason: "not-a-command" });
   assert.deepEqual(parseCommand("hello world"), { ok: false, reason: "not-a-command" });
+});
+
+test("parseWithImplicitRun: !tb <free text> becomes a run in the default project", () => {
+  assert.deepEqual(parseWithImplicitRun("!tb 創建一個 doc 資料夾", "AgentHub"), {
+    ok: true,
+    command: { kind: "run", projectId: "AgentHub", request: "創建一個 doc 資料夾" },
+  });
+  // known control commands are unchanged
+  assert.deepEqual(parseWithImplicitRun("!tb status T001", "AgentHub"), {
+    ok: true,
+    command: { kind: "status", jobId: "T001" },
+  });
+  assert.deepEqual(parseWithImplicitRun("!tb approve A7K2", "AgentHub"), {
+    ok: true,
+    command: { kind: "approve", code: "A7K2" },
+  });
+  // explicit run with a project still works
+  assert.deepEqual(parseWithImplicitRun("!tb run Other do it", "AgentHub"), {
+    ok: true,
+    command: { kind: "run", projectId: "Other", request: "do it" },
+  });
+  // bare !tb is still not a command
+  assert.equal(parseWithImplicitRun("!tb", "AgentHub").ok, false);
+  // non-!tb chat is still ignored
+  assert.deepEqual(parseWithImplicitRun("hello", "AgentHub"), {
+    ok: false,
+    reason: "not-a-command",
+  });
 });
 
 test("malformed commands are rejected with reasons", () => {
