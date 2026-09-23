@@ -2,7 +2,7 @@
 
 - Phase: 3
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -19,4 +19,24 @@ UI build passes; component/logic tests for project registration path normalizati
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed (logic + rendered UI; full tray/quit UX is desktop-interactive).
+- `src/app/desktop-logic.ts` — `normalizeProjectPath` (absolute-only, normalized), `registerProject`, `createBaseline` (latest visible message → history not executed).
+- `src/app/status-page.ts` — `renderStatusHtml(jobs)` renders one escaped row per job + count.
+- `scripts/console-smoke.cjs` — Electron console window rendering the status page.
+
+Real verification:
+- `console-logic-test.txt` — 4 logic units (path must be absolute; normalized cwd stored; baseline = latest message / now-if-empty; status page renders rows + HTML-escapes) + the electron test = 5/5.
+- `console-build.txt` — **REAL Electron** launched the console window, loaded the status page, and read back `jobCount=1, firstJobId=T001` from the DOM; exit 0.
+
+## Manual run (interactive tray/quit)
+Tray minimize, explicit-quit coordination, and live pairing UI are GUI-interactive and
+run on a desktop session:
+1. `npm install` (installs electron).
+2. Render check (headless-capable): `npx electron scripts/console-smoke.cjs` → prints `CONSOLE_RESULT ... exit 0`.
+3. Full console app (window visible): launch an Electron main that calls `renderStatusHtml`
+   with live `Store` jobs, adds a `Tray` with a "Quit" item that drains running jobs before
+   `app.quit()`, and minimizes to tray on window close. Verify: register a project (absolute
+   path enforced), pair a conversation (baseline set), see job rows update, minimize→tray,
+   explicit quit stops accepting new work.
+
+Commit: recorded on push (see git log).

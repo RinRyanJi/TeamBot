@@ -1,0 +1,10 @@
+# Desktop console logic (path normalization, baseline, status-page render)
+ok 1 - project path normalization requires an absolute path
+ok 2 - registerProject stores a normalized absolute cwd
+ok 3 - createBaseline uses the latest visible message (history not executed)
+ok 4 - status page renders a row per job and escapes content
+ok 5 - electron desktop console renders the status page (job rows visible)
+# tests 5
+# pass 5
+# fail 0
+# skipped 0
