@@ -5,6 +5,8 @@
 // so TeamBot's own messages in a self-chat cannot loop back as input.
 
 export const PREFIX = "!tb";
+/** Accepted command prefixes (case-insensitive). Both !tb and @tb work. */
+export const PREFIXES = ["!tb", "@tb"] as const;
 export const REPORT_PREFIX = "[TB";
 
 // ID naming (architecture §4): T=job, A=approval, Q=question. Case-insensitive.
@@ -53,7 +55,7 @@ export function parseCommand(raw: string): ParseResult {
 
   const toks = tokens(text);
   const first = toks[0];
-  if (!first || first.toLowerCase() !== PREFIX) {
+  if (!first || !PREFIXES.includes(first.toLowerCase() as (typeof PREFIXES)[number])) {
     return { ok: false, reason: "not-a-command" };
   }
 

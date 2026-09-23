@@ -132,8 +132,9 @@ async function main(): Promise<void> {
       if (baseline.has(m.messageId)) continue;
       baseline.add(m.messageId);
       if (m.text.includes(REPORT_PREFIX)) continue; // our own reports
-      const norm = m.text.replace(/！/g, "!").replace(/　/g, " ");
-      const idx = norm.toLowerCase().indexOf("!tb");
+      const norm = m.text.replace(/！/g, "!").replace(/＠/g, "@").replace(/　/g, " ");
+      const match = norm.toLowerCase().match(/[!@]tb/);
+      const idx = match?.index ?? -1;
       if (idx < 0) continue;
       log("msg: " + JSON.stringify(norm.slice(idx, idx + 100)));
       const parsed = parseWithImplicitRun(norm.slice(idx), DEFAULT_PROJECT_ID);

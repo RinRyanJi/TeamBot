@@ -59,6 +59,22 @@ test("approve/deny take approval code; answer takes question id + text", () => {
   });
 });
 
+test("both !tb and @tb prefixes are accepted", () => {
+  assert.deepEqual(parseCommand("@tb help"), { ok: true, command: { kind: "help" } });
+  assert.deepEqual(parseCommand("@tb run TeamBot go now"), {
+    ok: true,
+    command: { kind: "run", projectId: "TeamBot", request: "go now" },
+  });
+  assert.deepEqual(parseCommand("@TB status T001"), {
+    ok: true,
+    command: { kind: "status", jobId: "T001" },
+  });
+  assert.deepEqual(parseWithImplicitRun("@tb 創建一個 doc 資料夾", "AgentHub"), {
+    ok: true,
+    command: { kind: "run", projectId: "AgentHub", request: "創建一個 doc 資料夾" },
+  });
+});
+
 test("prefix and subcommand are case-insensitive", () => {
   assert.deepEqual(parseCommand("!TB HELP"), { ok: true, command: { kind: "help" } });
   assert.deepEqual(parseCommand("  !Tb Status t9  "), {
