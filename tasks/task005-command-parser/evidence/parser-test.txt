@@ -1,0 +1,28 @@
+# cmd: node --test tests/parser.test.ts
+TAP version 13
+# Subtest: help and projects
+ok 1 - help and projects
+# Subtest: run captures project alias and free-text request
+ok 2 - run captures project alias and free-text request
+# Subtest: status/stop/result take a job id
+ok 3 - status/stop/result take a job id
+# Subtest: continue/steer take job id + request
+ok 4 - continue/steer take job id + request
+# Subtest: approve/deny take approval code; answer takes question id + text
+ok 5 - approve/deny take approval code; answer takes question id + text
+# Subtest: prefix and subcommand are case-insensitive
+ok 6 - prefix and subcommand are case-insensitive
+# Subtest: a [TB ...] report line is NOT parsed as a command
+ok 7 - a [TB ...] report line is NOT parsed as a command
+# Subtest: ordinary chat without prefix is not a command
+ok 8 - ordinary chat without prefix is not a command
+# Subtest: malformed commands are rejected with reasons
+ok 9 - malformed commands are rejected with reasons
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
