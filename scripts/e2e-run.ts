@@ -14,6 +14,7 @@ import { PlaywrightTeamsAdapter } from "../src/transports/teams/playwright-adapt
 import { CodexAdapter } from "../src/codex/adapter.ts";
 import { parseCommand } from "../src/router/parser.ts";
 import { ensureWorkspace, DEFAULT_WORKSPACE, DEFAULT_PROJECT_ID } from "../src/app/defaults.ts";
+import { REPORT_PREFIX } from "../src/router/parser.ts";
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -96,8 +97,19 @@ async function main(): Promise<void> {
     for (const m of msgs) {
       if (baseline.has(m.messageId)) continue;
       baseline.add(m.messageId);
-      const parsed = parseCommand(m.text);
-      if (!parsed.ok) continue;
+      // Skip TeamBot's own report/instruction lines (they contain "[TB ..." and may
+      // include example "!tb approve" text we must NOT parse as a real command).
+      if (m.text.includes(REPORT_PREFIX)) continue;
+      // Real Teams message text includes author/timestamp around the body; find the
+      // command substring rather than requiring it at the very start.
+      const idx = m.text.toLowerCase().indexOf("!tb");
+      if (idx < 0) continue;
+      log("msg: " + m.text.slice(0, 90).replace(/\s+/g, " "));
+      const parsed = parseCommand(m.text.slice(idx));
+      if (!parsed.ok) {
+        log("  not a command: " + parsed.reason);
+        continue;
+      }
 
       if (phase === "await-run" && parsed.command.kind === "run") {
         phase = "running";
