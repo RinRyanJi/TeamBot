@@ -1,0 +1,131 @@
+{
+  "note": "Task decomposition of docs/implementation-plan.md. Each task has an evidence-based acceptance. 'evidence' field lists the concrete proof stored under the task's evidence/ folder. env=live means it requires the user's real Teams tenant/phone and cannot be produced headlessly by the agent; env=local means fully verifiable here.",
+  "tasks": [
+    {
+      "id": "task001", "slug": "project-scaffold", "phase": "1", "env": "local",
+      "title": "Node + TypeScript project scaffold with build/typecheck/test harness",
+      "spec": "Initialize an independent TeamBot Node/TypeScript project (package.json, tsconfig, npm scripts: build, typecheck, test). Add a test runner (node --test or vitest) and a trivial passing test to prove the harness runs.",
+      "acceptance": "npm run typecheck passes with 0 errors; npm test runs and reports at least 1 passing test; npm run build produces output.",
+      "evidence": ["typecheck.txt", "test.txt", "build.txt"]
+    },
+    {
+      "id": "task002", "slug": "codex-schema-pin", "phase": "0", "env": "local",
+      "title": "Pin & generate Codex app-server protocol schema; verify method/event names",
+      "spec": "Using codex-cli 0.156.1, generate the app-server JSON/TS schema. Commit the generated artifact. Add a test asserting the method names the architecture depends on (initialize, thread/start, thread/resume, turn/start, turn/steer, turn/interrupt) and key event names exist in the generated schema.",
+      "acceptance": "Generated schema file committed; test asserts each required method/event name is present (or documents the real name if different, updating docs).",
+      "evidence": ["codex-version.txt", "schema-generate.txt", "schema-names-test.txt"]
+    },
+    {
+      "id": "task003", "slug": "storage-layer", "phase": "1", "env": "local",
+      "title": "SQLite storage layer (inbox, outbox, jobs, approvals) with migrations",
+      "spec": "Implement a storage module over SQLite with schema/migrations for inbox, outbox, jobs, approvals, events, pairings. Transactional writes.",
+      "acceptance": "Unit tests cover create/read/update for each table and a transactional multi-write; tests pass.",
+      "evidence": ["storage-test.txt"]
+    },
+    {
+      "id": "task004", "slug": "inbox-dedup", "phase": "1", "env": "local",
+      "title": "Inbox dedup and pairing baseline",
+      "spec": "Dedup incoming messages by (tenant/account, chatId, messageId); establish baseline at first pairing so history is not executed; edited old messages do not trigger new jobs.",
+      "acceptance": "Tests: same message read twice -> dispatched once; message before baseline -> ignored; edited old message -> no new job.",
+      "evidence": ["inbox-dedup-test.txt"]
+    },
+    {
+      "id": "task005", "slug": "command-parser", "phase": "1", "env": "local",
+      "title": "!tb command parser and ID naming (T/A/Q)",
+      "spec": "Fixed parser for !tb commands (help, projects, run, status, continue, steer, stop, approve, deny, answer, result). Case-insensitive prefix normalization. ID naming per architecture (T=job, A=approval, Q=question).",
+      "acceptance": "Parser unit tests cover every command, malformed input, and that a [TB ...] report line is NOT parsed as a command.",
+      "evidence": ["parser-test.txt"]
+    },
+    {
+      "id": "task006", "slug": "router-authz", "phase": "1", "env": "local",
+      "title": "Router: identity check, allowlist, per-conversation binding, permission table",
+      "spec": "Route only verified !tb messages. Enforce group member allowlist, per-conversation binding, and the §5 permission table (start/query/continue-stop/approve-answer/admin).",
+      "acceptance": "Tests from the plan's verification table: group general chat & unauthorized member -> no dispatch; query self-chat jobId from group -> no private content; same display name different ID -> no permission; unregistered project -> no Codex start.",
+      "evidence": ["router-authz-test.txt"]
+    },
+    {
+      "id": "task007", "slug": "codex-adapter", "phase": "0/1", "env": "local",
+      "title": "Codex app-server stdio adapter (initialize/thread/turn/steer/interrupt)",
+      "spec": "Client that spawns codex app-server over stdio, performs initialize/initialized handshake, thread/start & thread/resume, turn/start, reads item/turn events, turn/steer with expectedTurnId, turn/interrupt, and answers approval/input requests.",
+      "acceptance": "Integration test performs a real handshake against codex-cli 0.156.1 in an isolated temp dir and observes at least one turn lifecycle; interrupt is honored. (Falls back to documented skip with reason if codex not available at runtime.)",
+      "evidence": ["codex-handshake-test.txt", "codex-turn-lifecycle.txt"]
+    },
+    {
+      "id": "task008", "slug": "supervisor-statemachine", "phase": "2", "env": "local",
+      "title": "Supervisor: job state machine, single active turn, queue, project lock",
+      "spec": "Job lifecycle (queued->starting->running->completed/failed, waiting_input/waiting_approval, stopping->cancelled, interrupted/unknown). One active turn per thread. Global single-job MVP with explicit queueing; project lock scaffold.",
+      "acceptance": "State-machine tests cover all transitions and illegal transitions; concurrent submissions from self-chat and group -> correct queue order, results routed to source.",
+      "evidence": ["supervisor-test.txt"]
+    },
+    {
+      "id": "task009", "slug": "progress-outbox", "phase": "2", "env": "local",
+      "title": "Progress coalescing and transactional outbox",
+      "spec": "Coalesce progress events (<=1 per 30s guidance), segment long messages with jobId/seq/part, transactional outbox with 'send status unknown' retention; no exactly-once claim.",
+      "acceptance": "Tests: bursty events coalesced; long message segmented; send-uncertain kept in outbox for reconciliation.",
+      "evidence": ["progress-outbox-test.txt"]
+    },
+    {
+      "id": "task010", "slug": "teams-adapter-fixture", "phase": "0/1", "env": "local",
+      "title": "Playwright Teams adapter against a local fixture page",
+      "spec": "Playwright adapter that reads new messages, confirms conversation identity, serializes sends and reconciles results — driven against a local HTML fixture emulating the Teams DOM (stable chat/message/sender IDs).",
+      "acceptance": "Playwright test against the fixture: reads a new message, extracts (chatId, messageId, senderId), sends a reply, reconciles it. Serialized single-writer verified.",
+      "evidence": ["teams-fixture-test.txt"]
+    },
+    {
+      "id": "task011", "slug": "electron-browser-host", "phase": "1", "env": "local",
+      "title": "Electron Browser Host (isolated Teams WebContentsView)",
+      "spec": "Port the isolated WebContentsView + persistent partition + login popup + view ownership design from ../codex-chatgpt-web (preserve MIT notices). No preload/Node integration for the remote page. Loopback-only control endpoint.",
+      "acceptance": "Launcher builds; a smoke test starts the shell, loads the fixture/login URL in the isolated view, and confirms no Node integration is exposed to the page.",
+      "evidence": ["launcher-build.txt", "browser-host-smoke.txt", "PORTING.md"]
+    },
+    {
+      "id": "task012", "slug": "phase1-roundtrip", "phase": "1", "env": "local",
+      "title": "Phase 1 end-to-end: help/projects/run/status/result with fixtures",
+      "spec": "Wire inbox+router+adapter+store+outbox with mock Teams fixture and mock/real Codex. Implement help, projects, run, status, result. Single running job.",
+      "acceptance": "Integration test: one fixture phone message creates exactly one job; Codex runs in the registered project; status queryable; completion/failure returned to the source conversation.",
+      "evidence": ["phase1-e2e-test.txt"]
+    },
+    {
+      "id": "task013", "slug": "phase2-interactive", "phase": "2", "env": "local",
+      "title": "Phase 2 interactive control: continue/steer/stop/approve/deny/answer",
+      "spec": "Add continue, steer, stop, approve, deny, answer with idempotent inbox, duplicate/expired approval handling, stop-vs-actually-stopped distinction, approval codes bound per §5.",
+      "acceptance": "Tests: mid-run query/steer/answer; wrong-source/expired approval rejected without affecting the turn; stopping vs cancelled distinguished; dangerous-op approval routed to self-chat.",
+      "evidence": ["phase2-interactive-test.txt"]
+    },
+    {
+      "id": "task014", "slug": "phase3-resilience", "phase": "3", "env": "local",
+      "title": "Phase 3 restart/reconnect/checkpoint recovery",
+      "spec": "Teams re-login, browser reload, checkpoint recovery; outbox reconciliation, send-status-unknown, process-loss, approval-wait recovery; offline recovery notice (arch §7).",
+      "acceptance": "Tests: restart does not re-run history nor misroute results; unrecoverable jobs clearly marked; Teams offline but job done -> result held in outbox, reconciled on recovery.",
+      "evidence": ["phase3-resilience-test.txt"]
+    },
+    {
+      "id": "task015", "slug": "retention-privacy", "phase": "3", "env": "local",
+      "title": "Data retention/deletion and secret hygiene (arch §8)",
+      "spec": "Implement TTL-based retention for audit/approval/cache/jobs, batch delete per conversation/job, and ensure logs/diagnostics exclude token/cookie/full env.",
+      "acceptance": "Tests: expired records purged per TTL; batch delete removes a job's approvals/events/cache; log redaction verified.",
+      "evidence": ["retention-test.txt", "redaction-test.txt"]
+    },
+    {
+      "id": "task016", "slug": "desktop-console", "phase": "3", "env": "local",
+      "title": "Desktop console: project registration, pairing, status page, tray, explicit quit",
+      "spec": "Desktop UI to register project aliases (normalized paths), pair conversations, member allowlist, per-job initiator, status page, tray minimize, explicit quit coordinating running jobs.",
+      "acceptance": "UI build passes; component/logic tests for project registration path normalization and pairing baseline; manual-run instructions documented.",
+      "evidence": ["console-build.txt", "console-logic-test.txt"]
+    },
+    {
+      "id": "task017", "slug": "windows-installer", "phase": "3", "env": "local",
+      "title": "Windows install package, settings docs, redacted diagnostics export",
+      "spec": "Produce a Windows installer/package, settings documentation, and a redacted diagnostics export.",
+      "acceptance": "Packaging script runs and produces an artifact; diagnostics export verified free of secrets.",
+      "evidence": ["package.txt", "diagnostics-redaction.txt"]
+    },
+    {
+      "id": "task018", "slug": "phase0-live-teams", "phase": "0", "env": "live",
+      "title": "Phase 0 LIVE: real tenant login, stable IDs, dual-surface, phone push (user-run)",
+      "spec": "Provide a guided harness + checklist for the user to run against their real Teams tenant: verify login/conditional access, stable chat/message/sender IDs, self-chat + one group dual-surface, background updates, reply targeting, same-account phone push behavior. Record go/no-go with fallback per plan.",
+      "acceptance": "User executes the harness and records results in evidence/results.md (go/no-go + which capabilities verified/blocked). Agent cannot self-verify (requires live tenant + phone; real Teams sends restricted per AGENTS.md).",
+      "evidence": ["harness/", "results-template.md"]
+    }
+  ]
+}

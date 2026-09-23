@@ -7,12 +7,13 @@
 - Keep Teams profiles, cookies, chat data, screenshots, and secrets out of Git.
 
 ## Current phase
-- Architecture planning only. The user explicitly corrected the scope: TeamBot lets a user operate Codex CLI and receive progress through Teams on a phone.
-- Both same-account self-chat and selected group chats are required for the first version.
-- Do not implement an ordinary keyword auto-reply bot. Agree on the architecture before implementation.
-- Read docs/architecture.md and docs/implementation-plan.md before future development.
-- Reference source may be copied into an independent TeamBot implementation after design review; preserve upstream MIT notices for copied code.
-- No runnable application has been implemented yet.
+- Implementation in progress. The architecture is agreed; the user directed building it out task by task with real, evidence-backed verification.
+- Work is decomposed in `tasks/` (see `tasks/README.md`). Each task is completed with real evidence stored under its `evidence/` folder, then committed/pushed individually.
+- TeamBot lets a user operate Codex CLI and receive progress through Teams on a phone. Both same-account self-chat and selected group chats are required for the first version.
+- Do not implement an ordinary keyword auto-reply bot.
+- Read docs/architecture.md and docs/implementation-plan.md before development.
+- Reference source may be copied into the independent TeamBot implementation; preserve upstream MIT notices for copied code (record provenance).
+- env=live tasks (real Teams tenant/phone) cannot be self-verified headlessly; provide a harness for the user to run. Do not send real Teams messages as incidental verification.
 
 ## Planned boundaries
 - Electron shell and Teams WebContentsView remain isolated; remote pages receive no preload or Node integration.

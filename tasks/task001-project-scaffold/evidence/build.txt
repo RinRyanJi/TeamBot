@@ -1,0 +1,9 @@
+# cmd: npm run build
+
+> teambot@0.0.1 build
+> tsc -p tsconfig.build.json
+
+# dist listing:
+total 2
+-rw-r--r-- 1 01080 1049089 231 Sep 23 20:06 index.d.ts
+-rw-r--r-- 1 01080 1049089 450 Sep 23 20:06 index.js

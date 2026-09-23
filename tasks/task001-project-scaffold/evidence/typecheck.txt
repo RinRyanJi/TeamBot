@@ -1,0 +1,6 @@
+# node: v22.18.0 / npm: 11.12.1 / tsc: Version 5.9.3
+# cmd: npm run typecheck
+
+> teambot@0.0.1 typecheck
+> tsc --noEmit
+
