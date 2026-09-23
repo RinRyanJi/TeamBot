@@ -2,7 +2,7 @@
 
 - Phase: 2
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,10 @@ Tests: bursty events coalesced; long message segmented; send-uncertain kept in o
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed.
+- `src/progress/progress.ts` — `ProgressCoalescer(intervalMs=30000)`: important events (start/complete/fail/waiting_*) always report and reset the routine window; routine progress reports at most once per interval. `segmentMessage` splits long bodies into `[TB <jobId>] (k/n)`-labelled parts under a size cap.
+- `src/progress/outbox.ts` — `Outbox` enqueues all segments of a message atomically (single transaction), tracks `sent` vs `unknown`; uncertain sends are retained as `unknown` for reconciliation, never blindly resent (no exactly-once claim). Added `Store.listOutboxByStatus`.
+
+Real verification (`evidence/progress-outbox-test.txt`): 6/6 — important-always-emit, routine coalesced to once/interval, important resets window, short=1 part, long message segmented with correct part/total + size cap + lossless reassembly, atomic enqueue + sent/unknown retention. Full suite 53/53.
+
+Commit: recorded on push (see git log).

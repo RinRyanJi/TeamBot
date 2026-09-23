@@ -351,16 +351,23 @@ export class Store {
   }
 
   listPendingOutbox(chatId?: string): OutboxRow[] {
+    return this.listOutboxByStatus("pending", chatId);
+  }
+
+  listOutboxByStatus(
+    status: OutboxRow["status"],
+    chatId?: string,
+  ): OutboxRow[] {
     const rows = (
       chatId
         ? this.db
             .prepare(
-              "SELECT * FROM outbox WHERE status='pending' AND chatId=? ORDER BY id",
+              "SELECT * FROM outbox WHERE status=? AND chatId=? ORDER BY id",
             )
-            .all(chatId)
+            .all(status, chatId)
         : this.db
-            .prepare("SELECT * FROM outbox WHERE status='pending' ORDER BY id")
-            .all()
+            .prepare("SELECT * FROM outbox WHERE status=? ORDER BY id")
+            .all(status)
     ) as Array<Record<string, unknown>>;
     return rows.map((r) => ({
       id: r.id as number,

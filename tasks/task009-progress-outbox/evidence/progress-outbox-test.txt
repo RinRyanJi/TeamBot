@@ -1,0 +1,22 @@
+# cmd: node --test tests/progress.test.ts
+TAP version 13
+# Subtest: important events always emit and reset the routine timer
+ok 1 - important events always emit and reset the routine timer
+# Subtest: routine progress is coalesced to once per interval
+ok 2 - routine progress is coalesced to once per interval
+# Subtest: an important event resets the window for subsequent routine events
+ok 3 - an important event resets the window for subsequent routine events
+# Subtest: short message is a single part
+ok 4 - short message is a single part
+# Subtest: long message is segmented with part/total and size cap
+ok 5 - long message is segmented with part/total and size cap
+# Subtest: outbox enqueues segments atomically and tracks send state
+ok 6 - outbox enqueues segments atomically and tracks send state
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
