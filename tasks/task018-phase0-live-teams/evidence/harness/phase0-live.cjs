@@ -26,6 +26,7 @@ const LOGIN = process.argv.includes("--login");
 const PROBE = process.argv.includes("--probe");
 const DIAG = process.argv.includes("--diag");
 const SENDTEST = process.argv.includes("--sendtest");
+const WATCH = process.argv.includes("--watch");
 const TEAMS_URL = "https://teams.microsoft.com/";
 // Teams web refuses unrecognized browsers ("classic Teams no longer available"). Present
 // a supported desktop Edge/Chrome User-Agent so the real web app loads and lets us log in.
@@ -122,6 +123,15 @@ const DIAG_JS = `(() => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Current messages in the open conversation (real Teams v2 selectors).
+const MSG_JS = `(() => {
+  const els = Array.from(document.querySelectorAll('[data-mid]'));
+  return els.map((el) => {
+    const a = el.querySelector('[data-acc-id]') || el.closest('[data-acc-id]');
+    return { messageId: el.getAttribute('data-mid'), senderId: a ? a.getAttribute('data-acc-id') : null, text: (el.textContent || '').trim().slice(0, 160) };
+  });
+})()`;
+
 // Reports the currently-open conversation so you can confirm the target before sending.
 const OPEN_JS = `(() => {
   const t = document.querySelector('[data-track-thread-id]');
@@ -191,7 +201,7 @@ async function runInAllFrames(wc, js) {
 app.disableHardwareAcceleration();
 
 app.whenReady().then(async () => {
-  const visible = !SELFCHECK && !PROBE; // headless for selfcheck and probe
+  const visible = !SELFCHECK && !PROBE && !WATCH; // headless for selfcheck/probe/watch
   const win = new BaseWindow({ show: visible, width: 1280, height: 900 });
   const view = new WebContentsView({
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: "persist:teambot-teams" },
@@ -226,6 +236,36 @@ app.whenReady().then(async () => {
     // Interactive one-time login. Leave the window open; the persistent partition
     // saves the session. Log in, open your test self-chat + a group, then close.
     console.log("PHASE0_LOGIN ready — log in, open your test conversations, then close the window.");
+    return;
+  }
+
+  if (WATCH) {
+    // Headless (hidden) watch: proves TeamBot RECEIVES messages you send, and that a
+    // hidden surface still gets background updates (architecture §5). Baseline the current
+    // messages, then report any new one that appears.
+    await sleep(12000); // settle + restore last-open conversation
+    const first = await view.webContents.executeJavaScript(MSG_JS);
+    const seen = new Set(first.map((m) => m.messageId));
+    console.log("WATCH ready — baseline " + seen.size + " messages. Send a message now; watching for ~3 min. Title: " + JSON.stringify(await view.webContents.executeJavaScript("document.title")));
+    const deadline = Date.now() + 180000;
+    const timer = setInterval(async () => {
+      try {
+        const msgs = await view.webContents.executeJavaScript(MSG_JS);
+        for (const m of msgs) {
+          if (m.messageId && !seen.has(m.messageId)) {
+            seen.add(m.messageId);
+            console.log("NEW_MESSAGE " + JSON.stringify({ text: m.text, hasMessageId: !!m.messageId, hasSenderId: !!m.senderId }));
+          }
+        }
+        if (Date.now() > deadline) {
+          clearInterval(timer);
+          console.log("WATCH done");
+          app.exit(0);
+        }
+      } catch (e) {
+        /* navigating */
+      }
+    }, 2500);
     return;
   }
 

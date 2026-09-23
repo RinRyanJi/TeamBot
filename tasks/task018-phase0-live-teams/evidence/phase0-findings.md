@@ -17,6 +17,8 @@ they exist only in the local gitignored `results/phase0-results.json`.
 | Chat list enumeration | ✅ (rail present) | Left rail chats are `role=treeitem` (31 seen); folders `UNREAD / TEAMS_AND_CHANNELS / NON_MEETING_CHATS`. |
 | Not display-name-only | ✅ | IDs are opaque stable values, not display names. |
 | **Reply / send path** | ✅ YES | With user consent, `--sendtest` typed into the compose box and sent (Enter) a marked message into the self-chat, then **reconciled it by `data-mid`** (got messageId + senderId + threadId). |
+| **Inbound receive path** | ✅ YES | `--watch` (baseline then poll) detected a user-sent message with stable messageId + senderId. |
+| **Background update while HIDDEN** | ✅ YES | The `--watch` window ran `show:false` (hidden) and still received the new message — the §5 "hidden surface still receives" item. |
 
 Thread id formats observed: self-chat = `48:notes…`; group = `19:…` (standard Teams thread prefixes).
 
@@ -34,13 +36,15 @@ Thread id formats observed: self-chat = `48:notes…`; group = `19:…` (standar
 
 ## Still pending (user / follow-up)
 
-- Self-chat + one group **bound simultaneously** (dual-surface); background updates while hidden.
-- Same-account **phone push** behavior (needs the phone).
+- Self-chat + one group **bound simultaneously** (dual-surface). Deferred by user (no test group yet); single-surface background reception is already proven.
+- Same-account **phone push** notification behavior (needs the phone; separate from us receiving).
 
-## Phase-0 decision (partial)
+## Phase-0 decision
 
-The critical feasibility unknown — **can stable chat/message/sender IDs be read from the
-real Teams web DOM?** — is **GO** (all three obtainable via stable attributes), and tenant
-login/conditional access passed with a supported-browser UA. Remaining dual-surface/push
-items are follow-ups; none currently blocks the design. Record final go/no-go in
-`results-template.md` after the dual-surface + push checks.
+**GO for the browser-automation transport.** All critical feasibility unknowns are
+resolved on the real tenant: tenant login/conditional access (with a supported-browser UA),
+stable chatId/messageId/senderId extraction, the **send** path (compose→send→reconcile),
+the **receive** path, and **background reception on a hidden surface**. The only unverified
+items — simultaneous dual-surface and same-account phone-push notification — are non-blocking
+follow-ups (single-surface send+receive+background all work; dual-surface is more of the same
+bound a second time).
