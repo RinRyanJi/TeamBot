@@ -1,0 +1,22 @@
+# cmd: node --test tests/supervisor.test.ts
+TAP version 13
+# Subtest: legal transitions are accepted
+ok 1 - legal transitions are accepted
+# Subtest: illegal transitions are rejected
+ok 2 - illegal transitions are rejected
+# Subtest: terminal states have no outgoing transitions
+ok 3 - terminal states have no outgoing transitions
+# Subtest: MVP single-job: self-chat and group queue in order, results route to source
+ok 4 - MVP single-job: self-chat and group queue in order, results route to source
+# Subtest: project lock: same project never runs concurrently even above cap
+ok 5 - project lock: same project never runs concurrently even above cap
+# Subtest: waiting job can be removed (cancel before run)
+ok 6 - waiting job can be removed (cancel before run)
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

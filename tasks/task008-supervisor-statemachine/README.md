@@ -2,7 +2,7 @@
 
 - Phase: 2
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,10 @@ State-machine tests cover all transitions and illegal transitions; concurrent su
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed.
+- `src/supervisor/states.ts` — `JobStatus` + legal transition map + `canTransition`/`assertTransition`/`isTerminal`. Encodes queued→starting→running→completed/failed, waiting_input/waiting_approval, stopping (which may race a real completion), and interrupted/unknown resolving after reconcile.
+- `src/supervisor/queue.ts` — `JobQueue(maxConcurrent=1)` with per-project mutual exclusion. MVP is global single-job; project locks are the scaffold for later multi-job (same project never runs twice concurrently). Items carry `chatId` so results route to source.
+
+Real verification (`evidence/supervisor-test.txt`): 6/6 — legal transitions accepted; illegal (completed→running, queued→running, etc.) rejected; terminal states have no outgoing; MVP single-job self+group queue order with source routing; project lock skips a locked-project job to run a different project even under a higher cap; waiting-job removal (cancel before run). Full suite 47/47.
+
+Commit: recorded on push (see git log).
