@@ -19,7 +19,13 @@ UI build passes; component/logic tests for project registration path normalizati
 
 ## Result
 
-Completed (logic + rendered UI; full tray/quit UX is desktop-interactive).
+Completed — logic + rendered UI + **GUI tray/quit main implemented and Electron-verified**.
+
+### GUI tray/quit main (added)
+- `src/app/quit-coordinator.ts` — `QuitCoordinator`: `stopAccepting()` + `drain(timeoutMs)` that waits for running jobs before quit.
+- `launcher/electron/console-main.cjs` — real Electron main: status window; **closing the window minimizes to the tray** (hidden, not destroyed, app stays alive); Tray menu **Quit** performs an explicit quit that drains running jobs then exits. `--smoke` self-check mode.
+- Evidence `tray-quit.txt`: REAL Electron ran the main — `hiddenAfterClose:true, aliveAfterClose:true, trayCreated:true, drained:true, waitedMs:371` (quit WAITED for the running job), exit 0; plus quit-coordinator units (accepting flip, drain-waits, drain-timeout). 4/4, skipped 0.
+
 - `src/app/desktop-logic.ts` — `normalizeProjectPath` (absolute-only, normalized), `registerProject`, `createBaseline` (latest visible message → history not executed).
 - `src/app/status-page.ts` — `renderStatusHtml(jobs)` renders one escaped row per job + count.
 - `scripts/console-smoke.cjs` — Electron console window rendering the status page.

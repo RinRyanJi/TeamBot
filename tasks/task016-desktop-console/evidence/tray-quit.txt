@@ -1,0 +1,13 @@
+# GUI tray/quit main (real electron + quit-coordinator units)
+# console-main --smoke:
+CONSOLE_MAIN_RESULT {"visibleBefore":true,"hiddenAfterClose":true,"aliveAfterClose":true,"trayCreated":true,"drained":true,"waitedMs":371}
+# exit: 0
+
+ok 1 - electron console main: close hides to tray; explicit quit drains running jobs
+ok 2 - starts accepting; stopAccepting flips it
+ok 3 - drain waits for running jobs to finish, then reports drained
+ok 4 - drain times out and reports jobs still running
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
