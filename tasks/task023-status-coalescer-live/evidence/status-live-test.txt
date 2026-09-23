@@ -1,0 +1,9 @@
+# live status model + coalescer
+ok 1 - coalesce: flush only when dirty AND interval elapsed
+ok 2 - output tail keeps only the last N lines
+ok 3 - snapshot reflects step/plan/tokens and idle time
+ok 4 - heartbeat flags idle after threshold
+ok 5 - snapshot is a copy (pull path can't mutate internal state)
+# tests 5
+# pass 5
+# fail 0

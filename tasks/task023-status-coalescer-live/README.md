@@ -2,7 +2,7 @@
 
 - Phase: 2
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,16 @@ Unit tests: bursty deltas coalesce to one dirty-gated update; plan/step/tail/tok
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed. `src/progress/status-model.ts` `TurnStatus`: fed by setStep/setPlan/pushOutput/
+setTokens; `shouldFlush(now)` gates updates to ≤1 per interval AND only when dirty
+(`markFlushed` resets); `snapshot(now)` is a synchronous **copy** for the pull `status`
+path; `isIdle(now, threshold)` is the heartbeat. Output tail bounded to N lines.
+
+Real verification (`evidence/status-live-test.txt`): 5/5 — coalesce gating (dirty +
+interval), tail bounded to last N, snapshot reflects step/plan/tokens/idle, heartbeat idle
+threshold, and snapshot immutability (pull path can't mutate internal state). Full suite green.
+
+Wiring note: this is the model + policy; the resident runner's status-card edit-in-place +
+`status` command consume `shouldFlush`/`snapshot` (adapter integration, no new logic).
+
+Commit: recorded on push (see git log).
