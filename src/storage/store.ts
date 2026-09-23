@@ -398,4 +398,70 @@ export class Store {
       .prepare("UPDATE outbox SET status=?, sentAt=COALESCE(?, sentAt) WHERE id=?")
       .run(status, sentAt ?? null, id);
   }
+
+  // --- retention / deletion (architecture §8) ---
+  count(table: "pairings" | "jobs" | "events" | "approvals" | "inbox" | "outbox"): number {
+    const row = this.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {
+      n: number;
+    };
+    return row.n;
+  }
+
+  /** Delete a job and everything attached to it (events, approvals, outbox). */
+  deleteJob(jobId: string): void {
+    this.transaction(() => {
+      this.db.prepare("DELETE FROM events WHERE jobId=?").run(jobId);
+      this.db.prepare("DELETE FROM approvals WHERE jobId=?").run(jobId);
+      this.db.prepare("DELETE FROM outbox WHERE jobId=?").run(jobId);
+      this.db.prepare("DELETE FROM jobs WHERE jobId=?").run(jobId);
+    });
+  }
+
+  /** Delete an entire conversation's data (jobs+children, inbox, outbox, approvals, pairing). */
+  deleteConversation(chatId: string): void {
+    this.transaction(() => {
+      const jobIds = (
+        this.db.prepare("SELECT jobId FROM jobs WHERE chatId=?").all(chatId) as Array<{
+          jobId: string;
+        }>
+      ).map((r) => r.jobId);
+      for (const jobId of jobIds) {
+        this.db.prepare("DELETE FROM events WHERE jobId=?").run(jobId);
+      }
+      this.db.prepare("DELETE FROM jobs WHERE chatId=?").run(chatId);
+      this.db.prepare("DELETE FROM approvals WHERE chatId=?").run(chatId);
+      this.db.prepare("DELETE FROM inbox WHERE chatId=?").run(chatId);
+      this.db.prepare("DELETE FROM outbox WHERE chatId=?").run(chatId);
+      this.db.prepare("DELETE FROM pairings WHERE chatId=?").run(chatId);
+    });
+  }
+
+  /** Delete rows in `table` whose `tsColumn` is strictly older than `cutoff`. Returns rows removed. */
+  purgeOlderThan(
+    table: "jobs" | "approvals" | "inbox" | "events" | "outbox",
+    tsColumn: string,
+    cutoff: number,
+  ): number {
+    // For jobs, cascade children of the jobs being purged first.
+    if (table === "jobs") {
+      return this.transaction(() => {
+        const jobIds = (
+          this.db
+            .prepare(`SELECT jobId FROM jobs WHERE ${tsColumn} < ?`)
+            .all(cutoff) as Array<{ jobId: string }>
+        ).map((r) => r.jobId);
+        for (const jobId of jobIds) {
+          this.db.prepare("DELETE FROM events WHERE jobId=?").run(jobId);
+          this.db.prepare("DELETE FROM approvals WHERE jobId=?").run(jobId);
+          this.db.prepare("DELETE FROM outbox WHERE jobId=?").run(jobId);
+        }
+        const res = this.db.prepare(`DELETE FROM jobs WHERE ${tsColumn} < ?`).run(cutoff);
+        return Number(res.changes);
+      });
+    }
+    const res = this.db
+      .prepare(`DELETE FROM ${table} WHERE ${tsColumn} < ?`)
+      .run(cutoff);
+    return Number(res.changes);
+  }
 }

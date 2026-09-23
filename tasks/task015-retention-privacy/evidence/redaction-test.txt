@@ -1,0 +1,16 @@
+# redaction (no token/cookie/env in logs/diagnostics)
+TAP version 13
+# Subtest: token-shaped substrings are scrubbed from strings
+ok 1 - token-shaped substrings are scrubbed from strings
+# Subtest: secret-named keys are redacted; env is dropped entirely
+ok 2 - secret-named keys are redacted; env is dropped entirely
+# Subtest: buildDiagnostics never emits secrets or full env
+ok 3 - buildDiagnostics never emits secrets or full env
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

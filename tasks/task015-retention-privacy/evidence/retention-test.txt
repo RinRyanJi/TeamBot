@@ -1,0 +1,16 @@
+# retention (TTL purge + cascade delete)
+TAP version 13
+# Subtest: deleteJob removes the job and all attached rows
+ok 1 - deleteJob removes the job and all attached rows
+# Subtest: deleteConversation removes all data for a chat
+ok 2 - deleteConversation removes all data for a chat
+# Subtest: purgeExpired removes rows older than TTL, keeps fresh ones
+ok 3 - purgeExpired removes rows older than TTL, keeps fresh ones
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

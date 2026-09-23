@@ -2,7 +2,7 @@
 
 - Phase: 3
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -19,4 +19,15 @@ Tests: expired records purged per TTL; batch delete removes a job's approvals/ev
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed.
+- `src/storage/retention.ts` — `purgeExpired(store, now, policy)` with `DEFAULT_RETENTION` (approvals 30d, cache/inbox 14d, jobs 30d); purging a job cascades to its events/approvals/outbox.
+- `Store` gains `deleteJob` (cascade), `deleteConversation` (jobs+events+approvals+inbox+outbox+pairing), `purgeOlderThan`, and `count`.
+- `src/util/redact.ts` — `redactString`/`redactValue`/`buildDiagnostics`: scrubs token-shaped substrings (Bearer/GitHub/Slack/JWT), redacts secret-named keys, and drops `env`/`environment` entirely (no full env dumps).
+
+Real verification: `evidence/retention-test.txt` 3/3 — deleteJob removes job+children;
+deleteConversation clears a chat entirely; TTL purge removes old job (cascaded) + old
+inbox cache while keeping fresh rows. `evidence/redaction-test.txt` 3/3 — tokens scrubbed
+from strings, secret keys redacted, `env` dropped, and diagnostics contain no bearer
+token / env / credential value. Full suite 78/78.
+
+Commit: recorded on push (see git log).
