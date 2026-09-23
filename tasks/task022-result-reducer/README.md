@@ -2,7 +2,7 @@
 
 - Phase: 2
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,14 @@ Unit tests: reducer picks final_answer over commentary; aggregates file changes 
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed. `src/progress/result-reducer.ts`: `reduceTurn(turnId, events)` folds normalized
+`TurnEvent`s into `{finalText, files, commands}` — final_answer beats commentary/deltas,
+diff snapshot overrides fileChange counts, commands aggregated; `formatResult` renders the
+two-tier verdict+details and flags failed commands. Idempotency: `sent_results(turnId PK)`
+table + `Store.markResultSent`/`resultAlreadySent` guarantee one authoritative result per turn.
+
+Real verification (`evidence/result-reducer-test.txt`): 5/5 — final_answer selection,
+fallback to last message, file aggregation + diff override, two-tier formatting with
+failed-command flag, and one-result-per-turn idempotency. Full suite green.
+
+Commit: recorded on push (see git log).

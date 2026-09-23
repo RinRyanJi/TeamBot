@@ -82,6 +82,13 @@ CREATE TABLE IF NOT EXISTS outbox (
   sentAt        INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS sent_results (
+  turnId        TEXT PRIMARY KEY,           -- one authoritative result per turn (idempotent)
+  chatId        TEXT NOT NULL,
+  teamsMessageId TEXT,
+  at            INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_job ON events (jobId, seq);
 CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox (status, chatId);
 CREATE INDEX IF NOT EXISTS idx_approvals_job ON approvals (jobId);

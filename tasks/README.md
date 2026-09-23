@@ -28,7 +28,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task019 | 1 | local | [Connect Playwright to the app-owned Teams surface over CDP](task019-cdp-integration/README.md) | DONE |
 | task020 | 1 | local | [Default AgentHub workspace for !tb (D:\AgentHub)](task020-agenthub-default-workspace/README.md) | DONE |
 | task021 | 2 | local | [Security defaults: switchable read-only posture, path allow-list, always-approve, redaction](task021-security-defaults/README.md) | DONE |
-| task022 | 2 | local | [Result reducer: turn fold -> final answer + change list (roadmap B)](task022-result-reducer/README.md) | pending |
+| task022 | 2 | local | [Result reducer: turn fold -> final answer + change list (roadmap B)](task022-result-reducer/README.md) | DONE |
 | task023 | 2 | local | [Live status model + coalescer wiring (roadmap C)](task023-status-coalescer-live/README.md) | pending |
 | task024 | 2 | local | [Approval registry: code<->requestId, timeouts, steer (roadmap D)](task024-approval-registry/README.md) | pending |
 | task025 | 3 | local | [Event-driven Teams inbox via MutationObserver (roadmap E)](task025-event-driven-inbox/README.md) | pending |

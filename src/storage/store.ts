@@ -399,6 +399,24 @@ export class Store {
       .run(status, sentAt ?? null, id);
   }
 
+  // --- result idempotency (one authoritative result per turn) ---
+  /** Record a turn's result as sent. Returns true if newly recorded (i.e. not a duplicate). */
+  markResultSent(turnId: string, chatId: string, at: number, teamsMessageId?: string): boolean {
+    const res = this.db
+      .prepare(
+        "INSERT OR IGNORE INTO sent_results (turnId,chatId,teamsMessageId,at) VALUES (?,?,?,?)",
+      )
+      .run(turnId, chatId, teamsMessageId ?? null, at);
+    return res.changes === 1;
+  }
+
+  resultAlreadySent(turnId: string): boolean {
+    const row = this.db
+      .prepare("SELECT turnId FROM sent_results WHERE turnId=?")
+      .get(turnId) as { turnId: string } | undefined;
+    return row !== undefined;
+  }
+
   // --- retention / deletion (architecture §8) ---
   count(table: "pairings" | "jobs" | "events" | "approvals" | "inbox" | "outbox"): number {
     const row = this.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {

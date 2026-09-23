@@ -1,0 +1,9 @@
+# result reducer + outbox result idempotency
+ok 1 - reducer picks final_answer over commentary and deltas
+ok 2 - reducer falls back to last message when no final_answer
+ok 3 - reducer aggregates file changes; diff snapshot overrides fileChange counts
+ok 4 - formatResult is a two-tier summary and flags failed commands
+ok 5 - outbox result idempotency: one authoritative result per turn
+# tests 5
+# pass 5
+# fail 0
