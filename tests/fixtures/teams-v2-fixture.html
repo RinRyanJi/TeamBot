@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Teams v2 DOM fixture</title>
+  </head>
+  <!-- Mimics the REAL Teams web DOM verified in Phase 0 (task018/phase0-findings.md):
+       chat id on [data-track-thread-id], messages on [data-mid] with author [data-acc-id],
+       compose is a contenteditable[role=textbox] that sends on Enter. -->
+  <body>
+    <main data-track-thread-id="19:testthread@thread.v2" data-track-thread-type="chat">
+      <div id="messages">
+        <div class="chat-pane-message" data-mid="1700000000001">
+          <span data-acc-id="8:orgid:user-alice">Alice</span>
+          <span class="body">!tb run TeamBot check login</span>
+        </div>
+        <div class="chat-pane-message" data-mid="1700000000002">
+          <span data-acc-id="8:orgid:user-bob">Bob</span>
+          <span class="body">looks good</span>
+        </div>
+      </div>
+      <div id="composer" contenteditable="true" role="textbox"></div>
+    </main>
+    <script>
+      (function () {
+        var seq = 1700000000100;
+        var ME = "8:orgid:me-account";
+        var composer = document.getElementById("composer");
+        composer.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            var text = composer.textContent;
+            if (!text) return;
+            seq += 1;
+            var div = document.createElement("div");
+            div.className = "chat-pane-message";
+            div.setAttribute("data-mid", String(seq));
+            var author = document.createElement("span");
+            author.setAttribute("data-acc-id", ME);
+            author.textContent = "Me";
+            var body = document.createElement("span");
+            body.className = "body";
+            body.textContent = text;
+            div.appendChild(author);
+            div.appendChild(body);
+            document.getElementById("messages").appendChild(div);
+            composer.textContent = "";
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

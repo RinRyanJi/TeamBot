@@ -1,0 +1,12 @@
+# Production adapter now supports real Teams selectors (teams profile) — verified vs teams-v2 fixture that mimics the live DOM
+TAP version 13
+# Subtest: teams profile: read via real selectors, send via contenteditable+Enter, reconcile
+ok 1 - teams profile: read via real selectors, send via contenteditable+Enter, reconcile
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

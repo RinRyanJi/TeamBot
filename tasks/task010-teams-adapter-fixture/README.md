@@ -33,4 +33,14 @@ Note: this uses installed Chrome to avoid a browser download; production binds t
 app's isolated Teams WebContentsView (task011). Stable-id availability on the real
 Teams DOM is a task018 (live) verification.
 
+### Real Teams selectors wired in (post-Phase-0)
+After task018 verified the live Teams DOM, the adapter gained selector **profiles**:
+`fixture` and `teams`. The `teams` profile uses the exact selectors verified live —
+chatId `[data-track-thread-id]`, message `[data-mid]`, sender `[data-acc-id]`, compose
+`[contenteditable][role=textbox]` (send via Enter) — plus a supported desktop Edge UA.
+Evidence `teams-v2-adapter-test.txt`: the production adapter drives a `teams-v2-fixture.html`
+that mimics the real DOM — reads chatId + stable message/sender ids, sends via
+contenteditable+Enter, reconciles by `data-mid`, and preserves single-writer ordering.
+Both profiles pass (real Chrome, 0 skipped).
+
 Commit: recorded on push (see git log).
