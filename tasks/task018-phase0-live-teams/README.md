@@ -30,6 +30,15 @@ Real verification of the harness itself (`evidence/selfcheck.txt`): **real Elect
 ran `phase0-live.cjs --selfcheck` and its probe extracted `stableChatId/stableMessageIds/
 stableSenderIds = true` from the isolated surface (exit 0); wrapped test 1/1, skipped 0.
 
+**Two-phase login/probe flow (added):** because the surface uses a persistent partition,
+you log in ONCE via `--login` (interactive, in the harness window — not the system browser,
+which is isolated by design), then `--probe` runs headless/unattended against the
+authenticated real Teams DOM and writes `results/phase0-results.json`. Verified now without
+a login: `--probe` reaches **real teams.microsoft.com** and correctly reports
+`authenticated:false` at `/error/eoa` (exit 4) — it knows when to ask you to log in
+(`evidence/probe-flow.txt`). After your one-time `--login`, the same `--probe` yields the
+real stable-id findings — at which point the agent CAN record them.
+
 **Not self-verifiable by the agent (by design):** real tenant login / conditional access,
 stable IDs on the *real* Teams DOM, dual-surface background updates, reply targeting, and
 same-account phone push — these require the user's live tenant + phone, and AGENTS.md

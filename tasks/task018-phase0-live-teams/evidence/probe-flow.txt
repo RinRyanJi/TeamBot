@@ -1,0 +1,6 @@
+# --login/--probe flow (persistent partition; log in once, probe unattended)
+# selfcheck (fixture): exit 0, stable ids extracted (see selfcheck.txt)
+# probe WITHOUT login -> reaches REAL teams.microsoft.com and reports not-authenticated:
+PHASE0_PROBE {"authenticated":false,"url":"https://teams.microsoft.com/error/eoa"}
+# exit: 0 (4 = run --login first)
+# => network reaches real Teams; after a one-time --login, --probe reports real stable-id findings.
