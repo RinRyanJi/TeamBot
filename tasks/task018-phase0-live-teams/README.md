@@ -2,7 +2,7 @@
 
 - Phase: 0
 - Env: live (requires user's real Teams tenant/phone)
-- Status: HARNESS-DONE (live run: user)
+- Status: LIVE-VERIFIED (stable IDs GO; dual-surface/push pending) — see evidence/phase0-findings.md
 
 ## Spec
 
@@ -18,6 +18,15 @@ User executes the harness and records results in evidence/results.md (go/no-go +
 - `results-template.md`
 
 ## Result
+
+**LIVE RESULT (2026-09-23):** the user logged in once via `--login`; the agent then ran
+`--probe` against the real authenticated Teams web (`teams.cloud.microsoft`) and **extracted
+stable chatId / messageId / senderId** from 10 real messages — the critical Phase-0
+feasibility unknown is **GO**. Real selectors discovered: `data-track-thread-id` (chat),
+`data-mid` (message), `data-acc-id` (sender); a supported-browser UA is required. Details:
+`evidence/phase0-findings.md` (raw IDs are gitignored, not committed). Dual-surface
+(self+group simultaneously), background updates, reply-targeting, and phone push remain
+follow-ups.
 
 Harness delivered and self-verified; the LIVE tenant/push run is inherently user-run.
 - `evidence/harness/phase0-live.cjs` — Electron harness that opens the app-owned isolated
