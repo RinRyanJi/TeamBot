@@ -1,0 +1,19 @@
+# npm run package:win -> real Windows ZIP artifact
+-rw-r--r-- 1 01080 1049089 41957 Sep 23 21:11 release/TeamBot-0.0.1-win.zip
+
+# artifact contents (top-level):
+dist\transports\
+dist\index.d.ts
+dist\index.js
+dist\app\coordinator.d.ts
+dist\app\coordinator.js
+dist\app\desktop-logic.d.ts
+dist\app\desktop-logic.js
+dist\app\diagnostics.d.ts
+dist\app\diagnostics.js
+dist\app\ids.d.ts
+dist\app\ids.js
+dist\app\projects.d.ts
+dist\app\projects.js
+dist\app\status-page.d.ts
+dist\app\status-page.js

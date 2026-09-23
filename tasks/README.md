@@ -23,7 +23,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task014 | 3 | local | [Phase 3 restart/reconnect/checkpoint recovery](task014-phase3-resilience/README.md) | DONE |
 | task015 | 3 | local | [Data retention/deletion and secret hygiene (arch §8)](task015-retention-privacy/README.md) | DONE |
 | task016 | 3 | local | [Desktop console: project registration, pairing, status page, tray, explicit quit](task016-desktop-console/README.md) | DONE |
-| task017 | 3 | local | [Windows install package, settings docs, redacted diagnostics export](task017-windows-installer/README.md) | pending |
+| task017 | 3 | local | [Windows install package, settings docs, redacted diagnostics export](task017-windows-installer/README.md) | DONE |
 | task018 | 0 | live | [Phase 0 LIVE: real tenant login, stable IDs, dual-surface, phone push (user-run)](task018-phase0-live-teams/README.md) | pending |
 
 See [manifest.json](manifest.json) for the machine-readable source and [scaffold.mjs](scaffold.mjs) for the generator.

@@ -1,0 +1,6 @@
+# diagnostics redaction test
+ok 1 - exported diagnostics omit secrets and env
+ok 2 - writeDiagnostics writes a redacted file to disk
+# tests 2
+# pass 2
+# fail 0
