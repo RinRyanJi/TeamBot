@@ -92,20 +92,24 @@ async function main(): Promise<void> {
   const texts: string[] = [];
 
   const deadline = Date.now() + 420_000; // 7 min window
+  let polls = 0;
   while (Date.now() < deadline) {
     const msgs = await teams.readMessages();
+    if (polls++ % 4 === 0) log("poll: " + msgs.length + " msgs visible");
     for (const m of msgs) {
       if (baseline.has(m.messageId)) continue;
       baseline.add(m.messageId);
+      // Log EVERY new message so we can see exactly what arrives from Teams.
+      log("msg[" + m.messageId.slice(-6) + "]: " + JSON.stringify(m.text.slice(0, 120)));
       // Skip TeamBot's own report/instruction lines (they contain "[TB ..." and may
       // include example "!tb approve" text we must NOT parse as a real command).
       if (m.text.includes(REPORT_PREFIX)) continue;
-      // Real Teams message text includes author/timestamp around the body; find the
-      // command substring rather than requiring it at the very start.
-      const idx = m.text.toLowerCase().indexOf("!tb");
+      // Normalize full-width punctuation (mobile keyboards) and find the command
+      // substring (real Teams text has author/timestamp around the body).
+      const norm = m.text.replace(/！/g, "!").replace(/　/g, " ");
+      const idx = norm.toLowerCase().indexOf("!tb");
       if (idx < 0) continue;
-      log("msg: " + m.text.slice(0, 90).replace(/\s+/g, " "));
-      const parsed = parseCommand(m.text.slice(idx));
+      const parsed = parseCommand(norm.slice(idx));
       if (!parsed.ok) {
         log("  not a command: " + parsed.reason);
         continue;
