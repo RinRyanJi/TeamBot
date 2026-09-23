@@ -2,7 +2,7 @@
 
 - Phase: 1
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,11 @@ Unit tests cover create/read/update for each table and a transactional multi-wri
 
 ## Result
 
-_Fill in when complete: commit hash, what was verified, and how._
+Completed. Storage layer over the **built-in `node:sqlite`** (no native dependency;
+runs with `--experimental-sqlite`).
+- `src/storage/schema.ts` — DDL for pairings, jobs, events, approvals, inbox, outbox + indexes; versioned via `PRAGMA user_version`.
+- `src/storage/store.ts` — typed `Store` with reentrant transactions (nested calls use SAVEPOINTs so helpers that open their own transaction compose inside an outer one), dedup insert (`INSERT OR IGNORE` → returns whether new), and CRUD for every table.
+
+Real verification (`evidence/storage-test.txt`): 8/8 storage tests pass — schema version, pairing JSON round-trip + upsert-in-place, inbox dedup (same key inserts once), job create/update + thread binding, event append updates `lastEventAt` and lists in order, approval lifecycle, outbox enqueue/list/mark, and atomic rollback of a multi-write transaction (0 events remain; store still usable after). Full suite 13/13.
+
+Commit: recorded on push (see git log).

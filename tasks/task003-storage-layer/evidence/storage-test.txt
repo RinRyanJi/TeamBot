@@ -1,0 +1,27 @@
+# cmd: node --test (storage.test.ts)
+# node: v22.18.0, storage backend: built-in node:sqlite (--experimental-sqlite)
+TAP version 13
+# Subtest: schema is applied and versioned
+ok 1 - schema is applied and versioned
+# Subtest: pairing upsert + read round-trips json fields
+ok 2 - pairing upsert + read round-trips json fields
+# Subtest: inbox dedup: same (tenant,chat,message) inserts once
+ok 3 - inbox dedup: same (tenant,chat,message) inserts once
+# Subtest: job create/read/update + thread binding
+ok 4 - job create/read/update + thread binding
+# Subtest: events append updates job.lastEventAt and lists in order
+ok 5 - events append updates job.lastEventAt and lists in order
+# Subtest: approvals lifecycle
+ok 6 - approvals lifecycle
+# Subtest: outbox enqueue/list/mark
+ok 7 - outbox enqueue/list/mark
+# Subtest: transaction rolls back on throw (atomic multi-write)
+ok 8 - transaction rolls back on throw (atomic multi-write)
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

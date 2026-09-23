@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
-    "test": "node --test --experimental-strip-types \"tests/**/*.test.ts\" \"src/**/*.test.ts\"",
+    "test": "node --test --experimental-strip-types --experimental-sqlite --disable-warning=ExperimentalWarning \"tests/**/*.test.ts\" \"src/**/*.test.ts\"",
     "gen:codex-schema": "node scripts/gen-codex-schema.mjs",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
