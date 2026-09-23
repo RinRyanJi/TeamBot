@@ -1,0 +1,10 @@
+node_modules/
+release/
+artifacts/
+.local/
+*.log
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/
