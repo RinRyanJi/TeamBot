@@ -1,0 +1,8 @@
+# defaults test
+ok 1 - default workspace is an absolute AgentHub path
+ok 2 - registerDefaults registers AgentHub as a project alias
+ok 3 - ensureWorkspace creates the folder tree
+ok 4 - the real default workspace exists on disk
+# tests 4
+# pass 4
+# fail 0
