@@ -1,0 +1,20 @@
+# cmd: node --test tests/inbox.test.ts
+TAP version 13
+# Subtest: same message read twice -> dispatched once
+ok 1 - same message read twice -> dispatched once
+# Subtest: message at/before baseline is history -> not accepted
+ok 2 - message at/before baseline is history -> not accepted
+# Subtest: edited old message (same id, new text) does not trigger a new job
+ok 3 - edited old message (same id, new text) does not trigger a new job
+# Subtest: no pairing -> rejected (never dispatch from unpaired chats)
+ok 4 - no pairing -> rejected (never dispatch from unpaired chats)
+# Subtest: history re-render after restart is not re-dispatched
+ok 5 - history re-render after restart is not re-dispatched
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

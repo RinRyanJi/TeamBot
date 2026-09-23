@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS pairings (
   allowlist     TEXT NOT NULL DEFAULT '[]',   -- JSON array of sender ids
   projects      TEXT NOT NULL DEFAULT '[]',   -- JSON array of project ids
   baselineMessageId TEXT,
+  baselineAt    INTEGER,                       -- messages at/before this are history, not executed
   createdAt     INTEGER NOT NULL,
   UNIQUE (tenant, chatId)
 );

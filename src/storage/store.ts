@@ -12,6 +12,7 @@ export interface Pairing {
   allowlist: string[];
   projects: string[];
   baselineMessageId?: string | null;
+  baselineAt?: number | null;
   createdAt: number;
 }
 
@@ -120,11 +121,12 @@ export class Store {
   upsertPairing(p: Pairing): void {
     this.db
       .prepare(
-        `INSERT INTO pairings (id,tenant,account,chatId,kind,allowlist,projects,baselineMessageId,createdAt)
-         VALUES (?,?,?,?,?,?,?,?,?)
+        `INSERT INTO pairings (id,tenant,account,chatId,kind,allowlist,projects,baselineMessageId,baselineAt,createdAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(tenant,chatId) DO UPDATE SET
            account=excluded.account, kind=excluded.kind, allowlist=excluded.allowlist,
-           projects=excluded.projects, baselineMessageId=excluded.baselineMessageId`,
+           projects=excluded.projects, baselineMessageId=excluded.baselineMessageId,
+           baselineAt=excluded.baselineAt`,
       )
       .run(
         p.id,
@@ -135,6 +137,7 @@ export class Store {
         JSON.stringify(p.allowlist),
         JSON.stringify(p.projects),
         p.baselineMessageId ?? null,
+        p.baselineAt ?? null,
         p.createdAt,
       );
   }
@@ -153,6 +156,7 @@ export class Store {
       allowlist: JSON.parse(row.allowlist as string) as string[],
       projects: JSON.parse(row.projects as string) as string[],
       baselineMessageId: (row.baselineMessageId as string | null) ?? null,
+      baselineAt: (row.baselineAt as number | null) ?? null,
       createdAt: row.createdAt as number,
     };
   }
