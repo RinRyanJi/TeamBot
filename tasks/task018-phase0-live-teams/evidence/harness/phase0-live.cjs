@@ -25,6 +25,11 @@ const SELFCHECK = process.argv.includes("--selfcheck");
 const LOGIN = process.argv.includes("--login");
 const PROBE = process.argv.includes("--probe");
 const TEAMS_URL = "https://teams.microsoft.com/";
+// Teams web refuses unrecognized browsers ("classic Teams no longer available"). Present
+// a supported desktop Edge/Chrome User-Agent so the real web app loads and lets us log in.
+// (Phase-0 finding: the embedded surface must set a supported UA.)
+const DESKTOP_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0";
 // Not-authenticated signals: an auth host, or a Teams error/landing path that appears
 // when there is no valid session.
 const NOT_AUTHED = /login\.(microsoftonline|live)\.com|login\.microsoft\.com|\/error\b|\/eoa\b|\/go\b/i;
@@ -70,6 +75,12 @@ app.whenReady().then(async () => {
   });
   win.contentView.addChildView(view);
   view.setBounds({ x: 0, y: 0, width: 1280, height: 900 });
+
+  // Real Teams needs a supported-browser UA; the local fixture does not care.
+  if (!SELFCHECK) {
+    view.webContents.setUserAgent(DESKTOP_UA);
+    view.webContents.session.setUserAgent(DESKTOP_UA);
+  }
 
   const url = SELFCHECK ? FIXTURE : TEAMS_URL;
   try {
