@@ -15,6 +15,7 @@ function argVal(name, def) {
 }
 const PORT = argVal("--port", "9333");
 const URL = argVal("--url", "https://teams.microsoft.com/");
+const SHOW = process.argv.includes("--show");
 const DESKTOP_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0";
 
@@ -24,7 +25,7 @@ app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
 app.disableHardwareAcceleration();
 
 app.whenReady().then(async () => {
-  const win = new BaseWindow({ show: false, width: 1280, height: 900 });
+  const win = new BaseWindow({ show: SHOW, width: 1280, height: 900 });
   const view = new WebContentsView({
     webPreferences: {
       nodeIntegration: false,
