@@ -150,6 +150,90 @@
   </svg>
   <p class="sub" style="margin-top:8px">長任務期間會定期回報<strong>合併狀態卡</strong>(就地編輯、≤1/間隔、心跳);<code>!tb status</code> 隨時拉快照。</p>
 
+  <h2>telecodex 的對話回報體驗(實際用起來的感覺)</h2>
+  <p class="sub" style="margin-top:-4px">以下皆<strong>讀 telecodex 原始碼確認</strong>(非 README 推測),括號為 <code>telecodex/src</code> 行號。</p>
+
+  <svg viewBox="0 0 900 470" role="img" aria-label="telecodex 單訊息變形時間軸">
+    <defs>
+      <marker id="a3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ea580c"/></marker>
+      <style>
+        .bub{fill:#161b22;stroke:#30363d;rx:10}
+        .t{font:13px "Segoe UI",sans-serif;fill:#e6edf3}
+        .tm{font:12px "Consolas",monospace;fill:#9da7b3}
+        .lbl{font:11.5px "Segoe UI",sans-serif;fill:#9da7b3}
+        .ev{font:11.5px "Consolas",monospace;fill:#26a5e4}
+        .hd{font:600 13px "Segoe UI",sans-serif;fill:#ea580c}
+        .ax{stroke:#ea580c;stroke-width:2;stroke-dasharray:5 4}
+      </style>
+    </defs>
+
+    <text class="hd" x="24" y="26">同一則訊息(或私訊草稿)持續被覆寫 — 聊天室不會被進度洗版</text>
+
+    <line class="ax" x1="44" y1="48" x2="44" y2="404" marker-end="url(#a3)"/>
+    <text class="lbl" x="18" y="230" transform="rotate(-90 18 230)" text-anchor="middle">時間</text>
+
+    <!-- step 1 -->
+    <rect class="bub" x="70" y="48" width="430" height="42"/>
+    <text class="t" x="88" y="74">⏳</text>
+    <text class="ev" x="520" y="66">送出後立刻出現</text>
+    <text class="lbl" x="520" y="82">佔位:讓你知道「收到了」</text>
+
+    <!-- step 2 -->
+    <rect class="bub" x="70" y="108" width="430" height="42"/>
+    <text class="t" x="88" y="134">⏳ Running `npm test`</text>
+    <text class="ev" x="520" y="126">item.started (command_execution)</text>
+    <text class="lbl" x="520" y="142">codex.rs:1504 → Progress("Running …")</text>
+
+    <!-- step 3 -->
+    <rect class="bub" x="70" y="168" width="430" height="60"/>
+    <text class="t" x="88" y="192">⏳ npm test completed</text>
+    <text class="tm" x="88" y="212">12 passing, 0 failing</text>
+    <text class="ev" x="520" y="188">item.completed (+ aggregatedOutput)</text>
+    <text class="lbl" x="520" y="204">codex.rs:1509-1526</text>
+
+    <!-- step 4 -->
+    <rect class="bub" x="70" y="246" width="430" height="60" stroke="#3fb950"/>
+    <text class="t" x="88" y="270">已修正 foo.ts 型別錯誤;測試全綠。</text>
+    <text class="tm" x="88" y="290">變更:foo.ts · 指令:npm test</text>
+    <text class="ev" x="520" y="266" fill="#3fb950">agent_message → AssistantText</text>
+    <text class="lbl" x="520" y="282">has_assistant_text latch:此後 progress</text>
+    <text class="lbl" x="520" y="297">不再覆蓋答案(turns.rs:584/596/605)</text>
+
+    <!-- finish -->
+    <rect class="bub" x="70" y="326" width="430" height="34" stroke="#3fb950" stroke-dasharray="4 3"/>
+    <text class="t" x="88" y="348">(收尾)全文 split_text → 多則真訊息</text>
+    <text class="ev" x="520" y="342" fill="#3fb950">finish() = flush(force)</text>
+    <text class="lbl" x="520" y="358">略過 debounce/截斷 · chunk 3500</text>
+
+    <!-- side rail -->
+    <rect x="70" y="382" width="800" height="70" fill="#0f141b" stroke="#30363d" rx="10"/>
+    <text class="hd" x="88" y="404">全程並行的兩件事</text>
+    <text class="lbl" x="88" y="424">① 每 4 秒 sendChatAction(typing) — 零訊息成本的「我還活著」(turns.rs:1164-1184)</text>
+    <text class="lbl" x="88" y="442">② 更新節流 max(edit_debounce_ms 900ms, 該 chat 送出間隔);沒變 / 未到間隔就不送(turns.rs:699-704)</text>
+  </svg>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="card"><h3>一則訊息在「變形」</h3><p><code>pending_text</code> 是<strong>取代</strong>而非追加(<code>turns.rs:581-602</code>)。整輪只佔一個訊息位置,最後一版永遠是答案。</p></div>
+    <div class="card"><h3>兩種書寫表面</h3><p>私訊用 <strong>草稿</strong> <code>sendMessageDraft</code>(進度<strong>不落聊天記錄</strong>,<code>turns.rs:47</code>);群組退回「佔位訊息 + editMessageText 就地改寫」。</p></div>
+    <div class="card"><h3>過程可以掉,結論不能掉</h3><p>收到 <code>retry_after</code> → 進入 <code>edit_backoff_until</code>,期間 flush 直接跳過;但收尾 <code>force</code> 一定把全文分段送出(<code>turns.rs:623-635 / 799-807</code>)。</p></div>
+    <div class="card"><h3>進行中截斷 / 收尾全文</h3><p>進行中只送 <code>truncate_for_live_update</code>(第一段);收尾才 <code>split_text</code> 全送 — 不用一直往下滑,但拿得到完整內容。</p></div>
+    <div class="card"><h3>決策用按鈕,不用打字</h3><p>inline keyboard:<code>Allow once</code> / <code>Allow session</code> / <code>Decline</code> / <code>Cancel turn</code>;狀態卡同步改成「Waiting for command approval」讓你<strong>看得出為何停住</strong>。逾時 <strong>15 分鐘 → Decline</strong>,永不自動批(<code>presentation.rs:27-92 / 187-197</code>)。</p></div>
+    <div class="card"><h3>中途改口不必等</h3><p>執行中送<strong>純文字</strong>即 <code>turn/steer</code> 併入當前輪;<strong>帶附件</strong>才排下一輪。<code>/history</code> 也是 Prev/Next 就地翻頁,不洗版。</p></div>
+  </div>
+
+  <h3 style="margin:22px 0 6px;font-size:15px;color:#26a5e4">TeamBot 的取捨(Teams 沒有的東西)</h3>
+  <table>
+    <tr><th>telecodex 手法</th><th>Teams 可行性</th><th>TeamBot 作法</th></tr>
+    <tr><td><code>sendMessageDraft</code> 私訊草稿</td><td>❌ 無對應 API</td><td>一律「佔位訊息 + 就地編輯」狀態卡</td></tr>
+    <tr><td>inline keyboard 按鈕</td><td>❌ CDP 操作網頁版送不出可互動卡片</td><td>文字代碼 <code>!tb approve &lt;碼&gt;</code> <span class="pill done">已實作</span></td></tr>
+    <tr><td><code>sendChatAction</code> typing</td><td>⚠️ 網頁 DOM 不穩定</td><td>狀態卡內的<strong>心跳時間戳</strong> <span class="pill done">已實作</span></td></tr>
+    <tr><td><code>retry_after</code> 退避</td><td>✅ Teams 也會限流</td><td>送出失敗即退避;<code>finish</code> 強制送出</td></tr>
+    <tr><td>debounce 900ms / chunk 3500</td><td>✅</td><td>直接沿用為預設值</td></tr>
+    <tr><td><code>pending_text</code> 取代語意</td><td>✅</td><td><code>TurnStatus</code> + <code>reduceTurn</code> <span class="pill done">已實作</span></td></tr>
+    <tr><td>逾時 → Decline</td><td>✅</td><td><code>sweepExpired</code>,絕不自動批 <span class="pill done">已實作</span></td></tr>
+  </table>
+  <p class="sub" style="margin-top:8px"><strong>要採納但尚未實作</strong>:上圖的「一則訊息持續變形」目前只到模型層(<code>TurnStatus</code> 算得出該不該更新),<strong>還沒接上 Teams 的訊息編輯</strong> → 即 roadmap <strong>H</strong>;以及「進行中截斷、收尾 force 全文分段」的兩段式策略。</p>
+
   <h2>指令模型</h2>
   <table>
     <tr><th>指令</th><th>作用</th><th>狀態</th></tr>
