@@ -246,11 +246,28 @@
     <tr><td><code>!tb stop</code> / <code>kill</code></td><td>收尾停 / 硬停</td><td><span class="pill p0">未接線 → R8·P0</span></td></tr>
     <tr><td><code>!tb unlock 30</code> / <code>lock</code></td><td>開放 <strong>AgentHub 內</strong>寫入 30 分鐘(<strong>不擴大路徑範圍</strong>)</td><td><span class="pill done">✅</span></td></tr>
     <tr><td><code>ok 2</code> / <code>no 2</code></td><td>多筆待決時指定<strong>小序號</strong>(非隨機碼)</td><td><span class="pill plan">引擎存在·改序號 🔜</span></td></tr>
+    <tr><td>(執行中純文字)</td><td>追加說明,併入當前輪(§3.7)</td><td><span class="pill plan">引擎存在·未接</span></td></tr>
+    <tr><td><code>併</code> / <code>新</code> · (再交辦一件)</td><td>回答「追加還是另開」/ 再丟一件即排隊回報位置</td><td><span class="pill p0">🔜 R8</span></td></tr>
+    <tr><td><code>!tb 取消 &lt;n&gt;</code></td><td>移除排隊中(未開跑)的任務</td><td><span class="pill p0">🔜 R8</span></td></tr>
     <tr><td><code>ok 永遠</code> / <code>!tb 名單</code></td><td>加進本專案白名單 / 檢視名單</td><td><span class="pill p0">🔜 R7 · P0</span></td></tr>
     <tr><td><code>!tb 交接</code></td><td>印 thread/cwd,回電腦接手</td><td><span class="pill plan">🔜 R5</span></td></tr>
     <tr><td><code>!tb login</code> / <code>logout</code></td><td>Codex 裝置登入</td><td><span class="pill plan">🔜 R6</span></td></tr>
   </table>
   <p class="sub" style="margin-top:8px"><strong>刻意不做</strong>:<code>run &lt;專案&gt;</code>、<code>sessions</code>、<code>use latest</code>、<code>new</code>——在單人 + 單一 AgentHub 場景下是<strong>多餘的選擇</strong>,只會讓人猶豫。</p>
+
+  <h2>執行中你能插手的四件事(§3.7)</h2>
+  <p class="sub" style="margin-top:-4px">核心:<strong>一個 session 同時只有一個 active turn</strong>(<code>queue.ts</code> maxConcurrent=1 + per-project 鎖)。在此前提下四種臨時狀況各有明確歸屬。</p>
+  <table>
+    <tr><th>你做的事</th><th>系統怎麼處理</th><th>引擎現況</th></tr>
+    <tr><td><strong>追加說明 / 插話</strong>(純文字)</td><td><code>turn/steer</code> 併入當前輪,不用先停再重下(帶附件則排下一輪)</td><td>引擎存在 <code>adapter.ts:200</code>·runner 未接</td></tr>
+    <tr><td><strong>另開任務</strong>(這是別的事)</td><td>排隊,不打斷當前輪;回報位置「前面還有 1 件」;同屬 AgentHub 受鎖序列化</td><td><code>JobQueue.enqueue</code> 回位置</td></tr>
+    <tr><td><strong>緊急喊停</strong></td><td>兩級:<code>stop</code>=收尾停(<code>turn/interrupt</code>)/<code>kill</code>=硬停;停完問排隊的要不要清</td><td><code>interrupt</code> 存在·未接 → <span class="pill p0">R8</span></td></tr>
+    <tr><td><strong>排隊中反悔</strong></td><td><code>!tb 取消 &lt;n&gt;</code> 移除未開跑的,不影響正在跑的</td><td>佇列可查·取消待接</td></tr>
+  </table>
+  <div class="grid" style="margin-top:12px">
+    <div class="card"><h4>追加 vs 另開,怎麼分</h4><p>預設「執行中純文字」當<strong>追加(steer)</strong>;帶附件或明顯新目標則<strong>排下一件</strong>。<strong>拿不準不猜</strong>——回一句「併入當前還是另開?回 <code>併</code>/<code>新</code>」,寧可多問一次也不要污染正在跑的輪。</p></div>
+    <div class="card"><h4>不打架</h4><p>steer 若正等批准 → steer 文字<strong>不當批准</strong>,排到批准解決後。喊停<strong>不受推播節流影響</strong>,立刻可用;<code>kill</code> 是唯一保證中斷失控輪的手段。停/完成後狀態卡不再掛 <code>⏳</code>。</p></div>
+  </div>
 
   <h2>用便利重排之後,roadmap 優先序變了</h2>
   <p class="sub" style="margin-top:-4px">這是 v3 相對 v2 最實質的產出:<strong>同一批候選功能,換個評分標準就換了順序</strong>。<strong>P0 內部有依賴順序</strong>:R0 是 gate → R1/R7/R8/R9 可平行 → H 待 R0 GO 後開工。</p>
@@ -259,7 +276,7 @@
     <tr><td><strong>R0</strong></td><td>驗證推播經濟學</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>它決定 §3.2/§5 成不成立,不驗證就開工等於賭</td></tr>
     <tr><td><strong>R7</strong></td><td><strong>硬牆 + 名單制</strong>:路徑越界直接拒、黑名單直接拒、白名單直接跑、<code>ok 永遠</code></td><td>v2 是「危險操作一律要問」</td><td><span class="pill p0">P0</span></td><td>比 R1 更根本:R1 降低<strong>單次</strong>成本,R7 降低<strong>次數</strong>。一般任務可做到 0 次批准</td></tr>
     <tr><td><strong>R1</strong></td><td>單一待決時 <code>ok</code> 免代碼</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>改動極小,直接解掉最痛的一步(11 字元 → 2 字元)</td></tr>
-    <tr><td><strong>R8</strong></td><td><strong>急停鍵</strong>:<code>stop</code> 接線(現 Phase 2 未接)</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>手機看到跑歪<strong>現在無法叫停</strong>,安全可用性缺口</td></tr>
+    <tr><td><strong>R8</strong></td><td><strong>執行中控制</strong>(§3.7):stop/kill 急停 + steer 追加 + 排隊/取消/併·新</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>看到跑歪<strong>現在無法叫停</strong>;追加/另開引擎多有但 runner 未接</td></tr>
     <tr><td><strong>R9</strong></td><td><strong>稽核 schema</strong>:append-only 表</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>所有「被拒/放行留痕」宣稱都靠它,現況連 schema 都沒有</td></tr>
     <tr><td><strong>H</strong></td><td>串流就地編輯接上 Teams(依賴 R0)</td><td>roadmap 第 1 項</td><td><span class="pill p0">P0·待 R0</span></td><td>升級理由變了:它不只是好看,它是<strong>唯一能不吵你的手段</strong></td></tr>
     <tr><td><strong>R3</strong></td><td>語音轉文字(需 spike + 回顯確認)</td><td>標「<strong>選用</strong>」</td><td><span class="pill plan">P1(未過降 P2)</span></td><td>手機打字是最大摩擦,但 CDP 能否取音檔未知、低可信輸入不可直通執行</td></tr>
@@ -293,8 +310,8 @@
     <div class="card"><h4>2 · 卡住警告的門檻?</h4><p><strong>決議:預設 3 分、可設、遞增措辭</strong>;心跳改由 Codex 事件驅動(否則卡死照跳=說謊)。decider: USER。</p></div>
     <div class="card"><h4>3 · 群組要不要做?</h4><p><strong>決議:延後,且正式記錄降級</strong> — 群組自 architecture.md §5「首版必要」降 P2,該章節標 deferred。decider: SEC+PM。</p></div>
     <div class="card"><h4>4 · <code>ok 永遠</code> 的白名單能反悔嗎?</h4><p><strong>決議:必做 <code>!tb 名單 移除 &lt;n&gt;</code></strong>,加樣式精確化 + TTL + 回顯加了什麼 pattern。decider: SEC。</p></div>
-    <div class="card" style="grid-column:1/-1;border-color:rgba(248,81,73,.5)"><h4>5 · 讀取也受路徑硬牆限制嗎?<span class="pill p0" style="margin-left:8px">需你拍板</span></h4>
-      <p>首版<strong>讀取預設拒</strong>(可測邊界,列出貨阻擋)。「唯讀參考白名單」降 P2,前提:realpath 落地 + 稽核落地 + 黑名單優先於白名單(機密路徑即使登記也硬拒)+ SEC 簽字。<strong>角色未收斂</strong>:SEC 主張全禁、USER 主張唯讀白名單(參考鄰近專案是高頻動作)。<strong>需你最終拍板 P2 是否開放。</strong></p></div>
+    <div class="card" style="grid-column:1/-1;border-color:rgba(63,185,80,.5)"><h4>5 · 讀取也受路徑硬牆限制嗎?<span class="pill done" style="margin-left:8px">owner 已拍板:別一刀切</span></h4>
+      <p><strong>寫入</strong>仍只限 AgentHub;<strong>讀取</strong>預設限 AgentHub,但可設定<strong>唯讀參考路徑白名單</strong>(參考鄰近專案)。四道防外洩:①機密路徑即使登記也硬拒、黑名單優先;②只能桌面端設定+重啟生效;③讀後寫回 AgentHub 照落稽核;④以解析後真實路徑判定防 symlink 繞出。見 PRD §6.1。</p></div>
   </div>
 
   <h2>現況(以 PRD.md §0.5 對帳表為準)</h2>
