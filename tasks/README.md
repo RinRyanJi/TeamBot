@@ -34,5 +34,33 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task025 | 3 | local | [Event-driven Teams inbox via MutationObserver (roadmap E)](task025-event-driven-inbox/README.md) | DONE |
 | task026 | 3 | local | [Continuity & recovery via thread/resume (roadmap F)](task026-resume-recovery/README.md) | DONE |
 | task027 | post | local | [Optional multi-task via additional threads + git worktrees (roadmap G)](task027-multitask-worktrees/README.md) | DONE |
+| task028 | G0 | live | [R0a: CDP editMessage feasibility spike](task028-r0a-editmessage-spike/README.md) | pending |
+| task029 | G0 | live | [R0b: notification economics + GO/PIVOT decision](task029-r0b-notification-economics/README.md) | pending |
+| task030 | G1 | local | [Governance: §4 reconciliation + traceability table](task030-governance-traceability/README.md) | pending |
+| task031 | G1 | local | [R9: append-only audit schema](task031-r9-audit-schema/README.md) | pending |
+| task032 | G1 | local | [R7a: path wall attribution + sandbox bypass tests](task032-r7a-path-wall-attribution/README.md) | pending |
+| task033 | G1 | local | [R7b: blacklist reframed as escalate-to-ask + adversarial tests](task033-r7b-blacklist-reframe/README.md) | pending |
+| task034 | G1 | local | [R7c: read/write asymmetry + read-only reference allow-list (Q5)](task034-r7c-read-write-asymmetry/README.md) | pending |
+| task035 | G1 | local | [R7d: per-project whitelist store + decision-order tests](task035-r7d-whitelist-store/README.md) | pending |
+| task036 | G1 | local | [R7e: list commands (ok 永遠 / !tb 名單 / remove / TTL)](task036-r7e-list-commands/README.md) | pending |
+| task037 | G1 | local | [R8a: emergency stop wiring (stop / kill)](task037-r8a-emergency-stop/README.md) | pending |
+| task038 | G1 | local | [R8b: steer wiring + add-vs-new disambiguation](task038-r8b-steer-disambiguation/README.md) | pending |
+| task039 | G1 | local | [R8c: queue visibility + cancel](task039-r8c-queue-cancel/README.md) | pending |
+| task040 | G1 | local | [Disconnect recovery hardening](task040-disconnect-recovery-hardening/README.md) | pending |
+| task041 | G2 | live | [H1: transport.editMessage() + CDP in-place edit](task041-h1-editmessage/README.md) | pending |
+| task042 | G2 | local | [H2: in-place status card + Codex-event-driven heartbeat (3-state)](task042-h2-status-card-heartbeat/README.md) | pending |
+| task043 | G2 | local | [H3: push budget (debounce/chunk/retry_after)](task043-h3-push-budget/README.md) | pending |
+| task044 | G3 | local | [R1: bare ok bound to versioned pending queue](task044-r1-bare-ok-versioned/README.md) | pending |
+| task045 | G3 | local | [R2: self-chat prefix + reversed escape](task045-r2-prefix-escape/README.md) | pending |
+| task046 | G3 | local | [R5: !tb 交接 (handoff)](task046-r5-handoff/README.md) | pending |
+| task047 | G3 | local | [R6: !tb login/logout + no-turn-when-unauthed](task047-r6-codex-login/README.md) | pending |
+| task048 | G3 | live | [R3: voice STT spike + echo-confirm](task048-r3-voice-stt-spike/README.md) | pending |
+| task049 | G3 | local | [R4: attachments in/out + artifact auto-return](task049-r4-attachments/README.md) | pending |
+| task050 | G3 | local | [§9 metrics instrumentation + benchmark tasks](task050-metrics-instrumentation/README.md) | pending |
+| task051 | G4 | live | [P2: group scenario](task051-p2-groups/README.md) | pending |
+| task052 | G4 | local | [P2: I multi-session (use latest / sessions / new)](task052-p2-multisession/README.md) | pending |
+| task053 | G4 | local | [P2: K history import](task053-p2-history-import/README.md) | pending |
+| task054 | G4 | local | [P2: N ACL roles + audit_log](task054-p2-acl-roles/README.md) | pending |
+| task055 | G4 | local | [P2: O config-driven settings](task055-p2-config-driven/README.md) | pending |
 
 See [manifest.json](manifest.json) for the machine-readable source and [scaffold.mjs](scaffold.mjs) for the generator.

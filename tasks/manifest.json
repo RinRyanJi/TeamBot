@@ -2,193 +2,680 @@
   "note": "Task decomposition of docs/implementation-plan.md. Each task has an evidence-based acceptance. 'evidence' field lists the concrete proof stored under the task's evidence/ folder. env=live means it requires the user's real Teams tenant/phone and cannot be produced headlessly by the agent; env=local means fully verifiable here.",
   "tasks": [
     {
-      "id": "task001", "slug": "project-scaffold", "phase": "1", "env": "local",
+      "id": "task001",
+      "slug": "project-scaffold",
+      "phase": "1",
+      "env": "local",
       "title": "Node + TypeScript project scaffold with build/typecheck/test harness",
       "spec": "Initialize an independent TeamBot Node/TypeScript project (package.json, tsconfig, npm scripts: build, typecheck, test). Add a test runner (node --test or vitest) and a trivial passing test to prove the harness runs.",
       "acceptance": "npm run typecheck passes with 0 errors; npm test runs and reports at least 1 passing test; npm run build produces output.",
-      "evidence": ["typecheck.txt", "test.txt", "build.txt"]
+      "evidence": [
+        "typecheck.txt",
+        "test.txt",
+        "build.txt"
+      ]
     },
     {
-      "id": "task002", "slug": "codex-schema-pin", "phase": "0", "env": "local",
+      "id": "task002",
+      "slug": "codex-schema-pin",
+      "phase": "0",
+      "env": "local",
       "title": "Pin & generate Codex app-server protocol schema; verify method/event names",
       "spec": "Using codex-cli 0.156.1, generate the app-server JSON/TS schema. Commit the generated artifact. Add a test asserting the method names the architecture depends on (initialize, thread/start, thread/resume, turn/start, turn/steer, turn/interrupt) and key event names exist in the generated schema.",
       "acceptance": "Generated schema file committed; test asserts each required method/event name is present (or documents the real name if different, updating docs).",
-      "evidence": ["codex-version.txt", "schema-generate.txt", "schema-names-test.txt"]
+      "evidence": [
+        "codex-version.txt",
+        "schema-generate.txt",
+        "schema-names-test.txt"
+      ]
     },
     {
-      "id": "task003", "slug": "storage-layer", "phase": "1", "env": "local",
+      "id": "task003",
+      "slug": "storage-layer",
+      "phase": "1",
+      "env": "local",
       "title": "SQLite storage layer (inbox, outbox, jobs, approvals) with migrations",
       "spec": "Implement a storage module over SQLite with schema/migrations for inbox, outbox, jobs, approvals, events, pairings. Transactional writes.",
       "acceptance": "Unit tests cover create/read/update for each table and a transactional multi-write; tests pass.",
-      "evidence": ["storage-test.txt"]
+      "evidence": [
+        "storage-test.txt"
+      ]
     },
     {
-      "id": "task004", "slug": "inbox-dedup", "phase": "1", "env": "local",
+      "id": "task004",
+      "slug": "inbox-dedup",
+      "phase": "1",
+      "env": "local",
       "title": "Inbox dedup and pairing baseline",
       "spec": "Dedup incoming messages by (tenant/account, chatId, messageId); establish baseline at first pairing so history is not executed; edited old messages do not trigger new jobs.",
       "acceptance": "Tests: same message read twice -> dispatched once; message before baseline -> ignored; edited old message -> no new job.",
-      "evidence": ["inbox-dedup-test.txt"]
+      "evidence": [
+        "inbox-dedup-test.txt"
+      ]
     },
     {
-      "id": "task005", "slug": "command-parser", "phase": "1", "env": "local",
+      "id": "task005",
+      "slug": "command-parser",
+      "phase": "1",
+      "env": "local",
       "title": "!tb command parser and ID naming (T/A/Q)",
       "spec": "Fixed parser for !tb commands (help, projects, run, status, continue, steer, stop, approve, deny, answer, result). Case-insensitive prefix normalization. ID naming per architecture (T=job, A=approval, Q=question).",
       "acceptance": "Parser unit tests cover every command, malformed input, and that a [TB ...] report line is NOT parsed as a command.",
-      "evidence": ["parser-test.txt"]
+      "evidence": [
+        "parser-test.txt"
+      ]
     },
     {
-      "id": "task006", "slug": "router-authz", "phase": "1", "env": "local",
+      "id": "task006",
+      "slug": "router-authz",
+      "phase": "1",
+      "env": "local",
       "title": "Router: identity check, allowlist, per-conversation binding, permission table",
       "spec": "Route only verified !tb messages. Enforce group member allowlist, per-conversation binding, and the §5 permission table (start/query/continue-stop/approve-answer/admin).",
       "acceptance": "Tests from the plan's verification table: group general chat & unauthorized member -> no dispatch; query self-chat jobId from group -> no private content; same display name different ID -> no permission; unregistered project -> no Codex start.",
-      "evidence": ["router-authz-test.txt"]
+      "evidence": [
+        "router-authz-test.txt"
+      ]
     },
     {
-      "id": "task007", "slug": "codex-adapter", "phase": "0/1", "env": "local",
+      "id": "task007",
+      "slug": "codex-adapter",
+      "phase": "0/1",
+      "env": "local",
       "title": "Codex app-server stdio adapter (initialize/thread/turn/steer/interrupt)",
       "spec": "Client that spawns codex app-server over stdio, performs initialize/initialized handshake, thread/start & thread/resume, turn/start, reads item/turn events, turn/steer with expectedTurnId, turn/interrupt, and answers approval/input requests.",
       "acceptance": "Integration test performs a real handshake against codex-cli 0.156.1 in an isolated temp dir and observes at least one turn lifecycle; interrupt is honored. (Falls back to documented skip with reason if codex not available at runtime.)",
-      "evidence": ["codex-handshake-test.txt", "codex-turn-lifecycle.txt"]
+      "evidence": [
+        "codex-handshake-test.txt",
+        "codex-turn-lifecycle.txt"
+      ]
     },
     {
-      "id": "task008", "slug": "supervisor-statemachine", "phase": "2", "env": "local",
+      "id": "task008",
+      "slug": "supervisor-statemachine",
+      "phase": "2",
+      "env": "local",
       "title": "Supervisor: job state machine, single active turn, queue, project lock",
       "spec": "Job lifecycle (queued->starting->running->completed/failed, waiting_input/waiting_approval, stopping->cancelled, interrupted/unknown). One active turn per thread. Global single-job MVP with explicit queueing; project lock scaffold.",
       "acceptance": "State-machine tests cover all transitions and illegal transitions; concurrent submissions from self-chat and group -> correct queue order, results routed to source.",
-      "evidence": ["supervisor-test.txt"]
+      "evidence": [
+        "supervisor-test.txt"
+      ]
     },
     {
-      "id": "task009", "slug": "progress-outbox", "phase": "2", "env": "local",
+      "id": "task009",
+      "slug": "progress-outbox",
+      "phase": "2",
+      "env": "local",
       "title": "Progress coalescing and transactional outbox",
       "spec": "Coalesce progress events (<=1 per 30s guidance), segment long messages with jobId/seq/part, transactional outbox with 'send status unknown' retention; no exactly-once claim.",
       "acceptance": "Tests: bursty events coalesced; long message segmented; send-uncertain kept in outbox for reconciliation.",
-      "evidence": ["progress-outbox-test.txt"]
+      "evidence": [
+        "progress-outbox-test.txt"
+      ]
     },
     {
-      "id": "task010", "slug": "teams-adapter-fixture", "phase": "0/1", "env": "local",
+      "id": "task010",
+      "slug": "teams-adapter-fixture",
+      "phase": "0/1",
+      "env": "local",
       "title": "Playwright Teams adapter against a local fixture page",
       "spec": "Playwright adapter that reads new messages, confirms conversation identity, serializes sends and reconciles results — driven against a local HTML fixture emulating the Teams DOM (stable chat/message/sender IDs).",
       "acceptance": "Playwright test against the fixture: reads a new message, extracts (chatId, messageId, senderId), sends a reply, reconciles it. Serialized single-writer verified.",
-      "evidence": ["teams-fixture-test.txt"]
+      "evidence": [
+        "teams-fixture-test.txt"
+      ]
     },
     {
-      "id": "task011", "slug": "electron-browser-host", "phase": "1", "env": "local",
+      "id": "task011",
+      "slug": "electron-browser-host",
+      "phase": "1",
+      "env": "local",
       "title": "Electron Browser Host (isolated Teams WebContentsView)",
       "spec": "Port the isolated WebContentsView + persistent partition + login popup + view ownership design from ../codex-chatgpt-web (preserve MIT notices). No preload/Node integration for the remote page. Loopback-only control endpoint.",
       "acceptance": "Launcher builds; a smoke test starts the shell, loads the fixture/login URL in the isolated view, and confirms no Node integration is exposed to the page.",
-      "evidence": ["launcher-build.txt", "browser-host-smoke.txt", "PORTING.md"]
+      "evidence": [
+        "launcher-build.txt",
+        "browser-host-smoke.txt",
+        "PORTING.md"
+      ]
     },
     {
-      "id": "task012", "slug": "phase1-roundtrip", "phase": "1", "env": "local",
+      "id": "task012",
+      "slug": "phase1-roundtrip",
+      "phase": "1",
+      "env": "local",
       "title": "Phase 1 end-to-end: help/projects/run/status/result with fixtures",
       "spec": "Wire inbox+router+adapter+store+outbox with mock Teams fixture and mock/real Codex. Implement help, projects, run, status, result. Single running job.",
       "acceptance": "Integration test: one fixture phone message creates exactly one job; Codex runs in the registered project; status queryable; completion/failure returned to the source conversation.",
-      "evidence": ["phase1-e2e-test.txt"]
+      "evidence": [
+        "phase1-e2e-test.txt"
+      ]
     },
     {
-      "id": "task013", "slug": "phase2-interactive", "phase": "2", "env": "local",
+      "id": "task013",
+      "slug": "phase2-interactive",
+      "phase": "2",
+      "env": "local",
       "title": "Phase 2 interactive control: continue/steer/stop/approve/deny/answer",
       "spec": "Add continue, steer, stop, approve, deny, answer with idempotent inbox, duplicate/expired approval handling, stop-vs-actually-stopped distinction, approval codes bound per §5.",
       "acceptance": "Tests: mid-run query/steer/answer; wrong-source/expired approval rejected without affecting the turn; stopping vs cancelled distinguished; dangerous-op approval routed to self-chat.",
-      "evidence": ["phase2-interactive-test.txt"]
+      "evidence": [
+        "phase2-interactive-test.txt"
+      ]
     },
     {
-      "id": "task014", "slug": "phase3-resilience", "phase": "3", "env": "local",
+      "id": "task014",
+      "slug": "phase3-resilience",
+      "phase": "3",
+      "env": "local",
       "title": "Phase 3 restart/reconnect/checkpoint recovery",
       "spec": "Teams re-login, browser reload, checkpoint recovery; outbox reconciliation, send-status-unknown, process-loss, approval-wait recovery; offline recovery notice (arch §7).",
       "acceptance": "Tests: restart does not re-run history nor misroute results; unrecoverable jobs clearly marked; Teams offline but job done -> result held in outbox, reconciled on recovery.",
-      "evidence": ["phase3-resilience-test.txt"]
+      "evidence": [
+        "phase3-resilience-test.txt"
+      ]
     },
     {
-      "id": "task015", "slug": "retention-privacy", "phase": "3", "env": "local",
+      "id": "task015",
+      "slug": "retention-privacy",
+      "phase": "3",
+      "env": "local",
       "title": "Data retention/deletion and secret hygiene (arch §8)",
       "spec": "Implement TTL-based retention for audit/approval/cache/jobs, batch delete per conversation/job, and ensure logs/diagnostics exclude token/cookie/full env.",
       "acceptance": "Tests: expired records purged per TTL; batch delete removes a job's approvals/events/cache; log redaction verified.",
-      "evidence": ["retention-test.txt", "redaction-test.txt"]
+      "evidence": [
+        "retention-test.txt",
+        "redaction-test.txt"
+      ]
     },
     {
-      "id": "task016", "slug": "desktop-console", "phase": "3", "env": "local",
+      "id": "task016",
+      "slug": "desktop-console",
+      "phase": "3",
+      "env": "local",
       "title": "Desktop console: project registration, pairing, status page, tray, explicit quit",
       "spec": "Desktop UI to register project aliases (normalized paths), pair conversations, member allowlist, per-job initiator, status page, tray minimize, explicit quit coordinating running jobs.",
       "acceptance": "UI build passes; component/logic tests for project registration path normalization and pairing baseline; manual-run instructions documented.",
-      "evidence": ["console-build.txt", "console-logic-test.txt"]
+      "evidence": [
+        "console-build.txt",
+        "console-logic-test.txt"
+      ]
     },
     {
-      "id": "task017", "slug": "windows-installer", "phase": "3", "env": "local",
+      "id": "task017",
+      "slug": "windows-installer",
+      "phase": "3",
+      "env": "local",
       "title": "Windows install package, settings docs, redacted diagnostics export",
       "spec": "Produce a Windows installer/package, settings documentation, and a redacted diagnostics export.",
       "acceptance": "Packaging script runs and produces an artifact; diagnostics export verified free of secrets.",
-      "evidence": ["package.txt", "diagnostics-redaction.txt"]
+      "evidence": [
+        "package.txt",
+        "diagnostics-redaction.txt"
+      ]
     },
     {
-      "id": "task018", "slug": "phase0-live-teams", "phase": "0", "env": "live",
+      "id": "task018",
+      "slug": "phase0-live-teams",
+      "phase": "0",
+      "env": "live",
       "title": "Phase 0 LIVE: real tenant login, stable IDs, dual-surface, phone push (user-run)",
       "spec": "Provide a guided harness + checklist for the user to run against their real Teams tenant: verify login/conditional access, stable chat/message/sender IDs, self-chat + one group dual-surface, background updates, reply targeting, same-account phone push behavior. Record go/no-go with fallback per plan.",
       "acceptance": "User executes the harness and records results in evidence/results.md (go/no-go + which capabilities verified/blocked). Agent cannot self-verify (requires live tenant + phone; real Teams sends restricted per AGENTS.md).",
-      "evidence": ["harness/", "results-template.md"]
+      "evidence": [
+        "harness/",
+        "results-template.md"
+      ]
     },
     {
-      "id": "task019", "slug": "cdp-integration", "phase": "1", "env": "local",
+      "id": "task019",
+      "slug": "cdp-integration",
+      "phase": "1",
+      "env": "local",
       "title": "Connect Playwright to the app-owned Teams surface over CDP",
       "spec": "Production wiring (architecture §9): the Electron host owns the isolated Teams WebContentsView and exposes a loopback-only remote-debugging endpoint; PlaywrightTeamsAdapter attaches via chromium.connectOverCDP to that existing surface instead of launching its own browser, then drives it with the teams selector profile.",
       "acceptance": "Integration test: an Electron host loads the teams-v2 fixture in an isolated WebContentsView with a loopback debugging port; the adapter connectOverCDP attaches, reads chatId + messages, sends+reconciles. Skips if electron/browser unavailable.",
-      "evidence": ["cdp-integration-test.txt"]
+      "evidence": [
+        "cdp-integration-test.txt"
+      ]
     },
     {
-      "id": "task020", "slug": "agenthub-default-workspace", "phase": "1", "env": "local",
+      "id": "task020",
+      "slug": "agenthub-default-workspace",
+      "phase": "1",
+      "env": "local",
       "title": "Default AgentHub workspace for !tb (D:\\AgentHub)",
       "spec": "Establish a default personal-assistant workspace at D:\\AgentHub and register it as the default project so !tb has a default startup folder. Ensure the folder exists; register a normalized absolute cwd.",
       "acceptance": "Tests: default workspace constant points to an absolute D:\\AgentHub; registerDefaults registers it in the ProjectRegistry; ensureWorkspace creates the folder; folder exists on disk.",
-      "evidence": ["defaults-test.txt", "workspace-listing.txt"]
+      "evidence": [
+        "defaults-test.txt",
+        "workspace-listing.txt"
+      ]
     },
     {
-      "id": "task021", "slug": "security-defaults", "phase": "2", "env": "local",
+      "id": "task021",
+      "slug": "security-defaults",
+      "phase": "2",
+      "env": "local",
       "title": "Security defaults: switchable read-only posture, path allow-list, always-approve, redaction",
       "spec": "Roadmap A from product-brainstorm. Default execution posture read-only; !tb unlock <duration> switches to workspace-write until expiry; !tb lock relocks; !tb kill hard-stops. Path allow-list confines writes to AgentHub (canonicalized; reject .., UNC, symlink escape, absolute-outside). always-approve classifier flags destructive/network/secret/elevation ops. Redact outbound Teams messages. Wire posture + commands into the resident runner.",
       "acceptance": "Unit tests: SecurityPolicy default read-only, unlock opens workspace-write until expiry then reverts, lock relocks; isPathAllowed confines to root; isAlwaysApprove flags destructive/network/secret/elevation; outbound redaction scrubs tokens. Parser recognizes unlock/lock/kill. Full suite green.",
-      "evidence": ["security-test.txt", "parser-security-test.txt"]
+      "evidence": [
+        "security-test.txt",
+        "parser-security-test.txt"
+      ]
     },
     {
-      "id": "task022", "slug": "result-reducer", "phase": "2", "env": "local",
+      "id": "task022",
+      "slug": "result-reducer",
+      "phase": "2",
+      "env": "local",
       "title": "Result reducer: turn fold -> final answer + change list (roadmap B)",
       "spec": "Reduce a turn's events into one authoritative result: extract final_answer agent text (ignore commentary/deltas), collect files changed (from turn/diff/updated + fileChange items) and commands run (from commandExecution items with exit codes). Idempotent outbox keyed by (turnId, kind) with edit-upsert semantics.",
       "acceptance": "Unit tests: reducer picks final_answer over commentary; aggregates file changes and commands; produces a two-tier summary; outbox (turnId,kind) uniqueness prevents duplicate result rows.",
-      "evidence": ["result-reducer-test.txt"]
+      "evidence": [
+        "result-reducer-test.txt"
+      ]
     },
     {
-      "id": "task023", "slug": "status-coalescer-live", "phase": "2", "env": "local",
+      "id": "task023",
+      "slug": "status-coalescer-live",
+      "phase": "2",
+      "env": "local",
       "title": "Live status model + coalescer wiring (roadmap C)",
       "spec": "Build a per-turn live status model fed by item/plan/delta (todo), item/started (current step), commandExecution/outputDelta (tail), tokenUsage (footer); coalesce to <=1 update/interval and only when dirty; heartbeat for idle detection; a status snapshot readable without the model.",
       "acceptance": "Unit tests: bursty deltas coalesce to one dirty-gated update; plan/step/tail/token reflected in snapshot; heartbeat flags idle; status snapshot readable synchronously.",
-      "evidence": ["status-live-test.txt"]
+      "evidence": [
+        "status-live-test.txt"
+      ]
     },
     {
-      "id": "task024", "slug": "approval-registry", "phase": "2", "env": "local",
+      "id": "task024",
+      "slug": "approval-registry",
+      "phase": "2",
+      "env": "local",
       "title": "Approval registry: code<->requestId, timeouts, steer (roadmap D)",
       "spec": "Registry binding Teams approval code <-> Codex server-request id; supports multiple pending, expiry (timeout -> pause/auto-decline, never auto-approve), requestUserInput answers, and steer-vs-new-turn routing. Distinguish command/file/permissions request kinds and their response shapes.",
       "acceptance": "Unit tests: bind+resolve by code; multiple pending distinct codes; expiry auto-declines; unknown/duplicate rejected; requestUserInput answered by id; decision shapes correct per kind.",
-      "evidence": ["approval-registry-test.txt"]
+      "evidence": [
+        "approval-registry-test.txt"
+      ]
     },
     {
-      "id": "task025", "slug": "event-driven-inbox", "phase": "3", "env": "local",
+      "id": "task025",
+      "slug": "event-driven-inbox",
+      "phase": "3",
+      "env": "local",
       "title": "Event-driven Teams inbox via MutationObserver (roadmap E)",
       "spec": "Replace read-polling with a MutationObserver in the Teams page that pushes new-message events to the host (exposeBinding/CDP), with a monotonic cursor and dedupe; keep a slow poll as a safety net.",
       "acceptance": "Integration test (real browser/electron): injecting a new message node triggers a pushed event with the new message id; dedupe prevents reprocessing; falls back to poll if binding unavailable.",
-      "evidence": ["event-inbox-test.txt"]
+      "evidence": [
+        "event-inbox-test.txt"
+      ]
     },
     {
-      "id": "task026", "slug": "resume-recovery", "phase": "3", "env": "local",
+      "id": "task026",
+      "slug": "resume-recovery",
+      "phase": "3",
+      "env": "local",
       "title": "Continuity & recovery via thread/resume (roadmap F)",
       "spec": "Persist the resident threadId; on boot call thread/resume to restore context; replay unresolved approvals/outbox; mark in-flight jobs interrupted and re-post status.",
       "acceptance": "Unit/integration tests: threadId persisted+reloaded; resume path invoked; unresolved outbox/approvals replayed; in-flight jobs marked interrupted (not re-run).",
-      "evidence": ["resume-recovery-test.txt"]
+      "evidence": [
+        "resume-recovery-test.txt"
+      ]
     },
     {
-      "id": "task027", "slug": "multitask-worktrees", "phase": "post", "env": "local",
+      "id": "task027",
+      "slug": "multitask-worktrees",
+      "phase": "post",
+      "env": "local",
       "title": "Optional multi-task via additional threads + git worktrees (roadmap G)",
       "spec": "Allow opt-in parallel tasks by binding additional Codex threads to isolated git worktrees; project lock ensures same project never runs twice concurrently. Default remains single resident thread.",
       "acceptance": "Unit tests: worktree allocator assigns isolated dirs; scheduler runs different projects in parallel while serializing same-project; default single-thread unchanged.",
-      "evidence": ["multitask-test.txt"]
+      "evidence": [
+        "multitask-test.txt"
+      ]
+    },
+    {
+      "id": "task028",
+      "slug": "r0a-editmessage-spike",
+      "phase": "G0",
+      "env": "live",
+      "title": "R0a: CDP editMessage feasibility spike",
+      "spec": "In the real tenant over CDP, programmatically edit a message you just sent (by data-mid) and read it back to confirm the content changed. Verify whether data-mid stays stable after an edit (if not, the heartbeat locator key drifts).",
+      "acceptance": "Live evidence: before/after DOM content of the same data-mid; a note on data-mid stability. This gates H.",
+      "evidence": [
+        "editmessage-spike.md",
+        "before-after.txt"
+      ]
+    },
+    {
+      "id": "task029",
+      "slug": "r0b-notification-economics",
+      "phase": "G0",
+      "env": "live",
+      "title": "R0b: notification economics + GO/PIVOT decision",
+      "spec": "Measure on a real phone: (1) does a NEW message push; (2) does editing the same message 3x push again; (3) does high-frequency editing within 60s accumulate into a push or trigger throttling. Decide GO (edit does not push) vs PIVOT (edit pushes).",
+      "acceptance": "Live observation log; GO/PIVOT conclusion written back into PRD §0.",
+      "evidence": [
+        "notification-economics.md",
+        "decision.md"
+      ]
+    },
+    {
+      "id": "task030",
+      "slug": "governance-traceability",
+      "phase": "G1",
+      "env": "local",
+      "title": "Governance: §4 reconciliation + traceability table",
+      "spec": "Build a PRD↔architecture↔code(file:line)↔test traceability table. Any P0 requirement with an empty cell may not be marked ✅. Correct fake ✅ (stop/kill/steer etc.) across tasks/README and PRD §4.",
+      "acceptance": "traceability table committed; tasks/README statuses corrected to match code reality; a test or check that flags a ✅ without evidence.",
+      "evidence": [
+        "traceability.md",
+        "status-corrections.txt"
+      ]
+    },
+    {
+      "id": "task031",
+      "slug": "r9-audit-schema",
+      "phase": "G1",
+      "env": "local",
+      "title": "R9: append-only audit schema",
+      "spec": "Add an append-only audit table (no UPDATE/DELETE) recording {ts, senderId, conversation, redacted command, decision deny/allow/whitelist-add, matched rule}. Write on every deny/allow/whitelist path.",
+      "acceptance": "Unit tests: each decision path writes an audit row; UPDATE/DELETE on the table is rejected; redaction applied.",
+      "evidence": [
+        "audit-test.txt"
+      ]
+    },
+    {
+      "id": "task032",
+      "slug": "r7a-path-wall-attribution",
+      "phase": "G1",
+      "env": "local",
+      "title": "R7a: path wall attribution + sandbox bypass tests",
+      "spec": "Reframe the path wall as Codex sandbox writableRoots (TeamBot does not re-implement it). Add bypass tests against the sandbox's real write behavior: .. / absolute-outside / UNC / junction / %VAR%; CI builds a junction pointing to C:\\ and asserts writes are denied.",
+      "acceptance": "Bypass test suite runs against actual sandbox write behavior; each bypass is denied; evidence captured. §8/§9 'outside-AgentHub = 0' only claimed after this.",
+      "evidence": [
+        "sandbox-bypass-test.txt"
+      ]
+    },
+    {
+      "id": "task033",
+      "slug": "r7b-blacklist-reframe",
+      "phase": "G1",
+      "env": "local",
+      "title": "R7b: blacklist reframed as escalate-to-ask + adversarial tests",
+      "spec": "Change blacklist from 'claims to block' to 'match → escalate to must-ask/isolate'. Fill missing patterns (diskpart, Set-ExecutionPolicy, takeown, fsutil, wmic, certutil -decode). Add positive + adversarial negatives per class (case, spaces, quote-splicing, PS aliases, -EncodedCommand, backticks).",
+      "acceptance": "Per-class tests pass; wording in §9 threat table corrected (no 'reliable block' claim).",
+      "evidence": [
+        "blacklist-test.txt"
+      ]
+    },
+    {
+      "id": "task034",
+      "slug": "r7c-read-write-asymmetry",
+      "phase": "G1",
+      "env": "local",
+      "title": "R7c: read/write asymmetry + read-only reference allow-list (Q5)",
+      "spec": "Writes limited to AgentHub; reads default to AgentHub plus a configurable read-only reference allow-list. Secret paths hard-denied even if registered (blacklist beats allow-list); realpath-resolved; desktop-set + restart only.",
+      "acceptance": "Tests: read allowed in listed dir; write to listed dir denied; secret path denied even when registered; symlink escape denied.",
+      "evidence": [
+        "read-write-test.txt"
+      ]
+    },
+    {
+      "id": "task035",
+      "slug": "r7d-whitelist-store",
+      "phase": "G1",
+      "env": "local",
+      "title": "R7d: per-project whitelist store + decision-order tests",
+      "spec": "Per-project (keyed by projectId, even if single-valued) whitelist schema + store CRUD. Decision-order unit tests: path-out-of-bounds is denied even if the command is whitelisted (①② before ③).",
+      "acceptance": "CRUD tests + order tests (hardwall beats whitelist) pass.",
+      "evidence": [
+        "whitelist-store-test.txt"
+      ]
+    },
+    {
+      "id": "task036",
+      "slug": "r7e-list-commands",
+      "phase": "G1",
+      "env": "local",
+      "title": "R7e: list commands (ok 永遠 / !tb 名單 / remove / TTL)",
+      "spec": "ok 永遠 writes a precise pattern (no wildcard npm run) with echo of the pattern added; per-entry TTL that actively asks before expiring; !tb 名單 to read, !tb 名單 移除 <n> to remove.",
+      "acceptance": "Loop test: add → match runs directly → remove → back to asking. Echo + TTL behavior tested.",
+      "evidence": [
+        "list-commands-test.txt"
+      ]
+    },
+    {
+      "id": "task037",
+      "slug": "r8a-emergency-stop",
+      "phase": "G1",
+      "env": "local",
+      "title": "R8a: emergency stop wiring (stop / kill)",
+      "spec": "Wire stop (graceful, turn/interrupt) and kill (hard) into the command layer (coordinator, currently Phase 2). After stop/kill the status card no longer shows ⏳. Stop bypasses push throttle.",
+      "acceptance": "Tests: stop drains current step, kill interrupts immediately, status card cleared; live smoke.",
+      "evidence": [
+        "stop-kill-test.txt"
+      ]
+    },
+    {
+      "id": "task038",
+      "slug": "r8b-steer-disambiguation",
+      "phase": "G1",
+      "env": "local",
+      "title": "R8b: steer wiring + add-vs-new disambiguation",
+      "spec": "Mid-turn plain text → turn/steer folds into current turn; attachments queue as next turn; ambiguous → ask 併/新. steer text is never treated as an approval.",
+      "acceptance": "Tests: steer folds in; disambiguation routes correctly; steer != approval.",
+      "evidence": [
+        "steer-test.txt"
+      ]
+    },
+    {
+      "id": "task039",
+      "slug": "r8c-queue-cancel",
+      "phase": "G1",
+      "env": "local",
+      "title": "R8c: queue visibility + cancel",
+      "spec": "Second task while one runs → queued with position reported; !tb 取消 <n> removes one queued item; !tb 取消 全部 / 清空 clears all queued without touching the running one.",
+      "acceptance": "Tests: position reported; single/all cancel; running job unaffected.",
+      "evidence": [
+        "queue-cancel-test.txt"
+      ]
+    },
+    {
+      "id": "task040",
+      "slug": "disconnect-recovery-hardening",
+      "phase": "G1",
+      "env": "local",
+      "title": "Disconnect recovery hardening",
+      "spec": "On disconnect fall back to read-only + stop accepting jobs; ?/status returns 'remote-control link broken' when the runner is offline (recovery.ts already has in-flight→unknown, outbox replay, offline-gap notice).",
+      "acceptance": "Tests: offline downgrade to read-only; offline status pull returns link-broken.",
+      "evidence": [
+        "disconnect-test.txt"
+      ]
+    },
+    {
+      "id": "task041",
+      "slug": "h1-editmessage",
+      "phase": "G2",
+      "env": "live",
+      "title": "H1: transport.editMessage() + CDP in-place edit",
+      "spec": "Add transport.editMessage() interface and CDP in-place edit implementation (per R0a spike). Depends on task028/029 GO.",
+      "acceptance": "Live evidence: a message edited in place and read back.",
+      "evidence": [
+        "editmessage-live.md"
+      ]
+    },
+    {
+      "id": "task042",
+      "slug": "h2-status-card-heartbeat",
+      "phase": "G2",
+      "env": "local",
+      "title": "H2: in-place status card + Codex-event-driven heartbeat (3-state)",
+      "spec": "One message morphs (⏳ → doing → conclusion). Heartbeat driven by Codex app-server events, not setInterval; distinguishes progressing / idle / channel-dead. Stuck warning N default 3 min, configurable.",
+      "acceptance": "Tests: three-state transitions; stuck-warning fake-clock test.",
+      "evidence": [
+        "status-heartbeat-test.txt"
+      ]
+    },
+    {
+      "id": "task043",
+      "slug": "h3-push-budget",
+      "phase": "G2",
+      "env": "local",
+      "title": "H3: push budget (debounce/chunk/retry_after)",
+      "spec": "Land the push budget: debounce 900ms, chunk 3500, retry_after backoff. Every row of §5 has a corresponding acceptance method.",
+      "acceptance": "Tests: throttle interval respected; chunking; retry_after backoff.",
+      "evidence": [
+        "push-budget-test.txt"
+      ]
+    },
+    {
+      "id": "task044",
+      "slug": "r1-bare-ok-versioned",
+      "phase": "G3",
+      "env": "local",
+      "title": "R1: bare ok bound to versioned pending queue",
+      "spec": "Approval target decided by TeamBot's versioned pending queue; a new pending bumps the version and invalidates a prior bare ok (degrades to a report). Reference carries data only.",
+      "acceptance": "Race tests: delayed ok hits old vs new pending; invalidation on state change.",
+      "evidence": [
+        "bare-ok-test.txt"
+      ]
+    },
+    {
+      "id": "task045",
+      "slug": "r2-prefix-escape",
+      "phase": "G3",
+      "env": "local",
+      "title": "R2: self-chat prefix + reversed escape",
+      "spec": "Self-chat default = notes (not sent); explicit marker to send (reversed from '.' escape). First-use opt-in.",
+      "acceptance": "Tests: marked vs unmarked routing; opt-in gate.",
+      "evidence": [
+        "prefix-escape-test.txt"
+      ]
+    },
+    {
+      "id": "task046",
+      "slug": "r5-handoff",
+      "phase": "G3",
+      "env": "local",
+      "title": "R5: !tb 交接 (handoff)",
+      "spec": "Print thread id + cwd + files changed this turn so you can resume on the desktop.",
+      "acceptance": "Test: output matches expected fields.",
+      "evidence": [
+        "handoff-test.txt"
+      ]
+    },
+    {
+      "id": "task047",
+      "slug": "r6-codex-login",
+      "phase": "G3",
+      "env": "local",
+      "title": "R6: !tb login/logout + no-turn-when-unauthed",
+      "spec": "Codex device login/logout; when not logged in do not start a turn and do not fail silently — say 'Codex not logged in' and offer login.",
+      "acceptance": "Tests: unauthed turn intercepted with a clear message.",
+      "evidence": [
+        "login-test.txt"
+      ]
+    },
+    {
+      "id": "task048",
+      "slug": "r3-voice-stt-spike",
+      "phase": "G3",
+      "env": "live",
+      "title": "R3: voice STT spike + echo-confirm",
+      "spec": "Spike: can CDP obtain the audio blob / transcript from a Teams voice message. Transcript is echoed for confirmation before entering the parser; destructive wording forces confirmation. If spike fails, drop to P2.",
+      "acceptance": "Spike evidence: whether audio/transcript is obtainable; echo-confirm design note.",
+      "evidence": [
+        "voice-spike.md"
+      ]
+    },
+    {
+      "id": "task049",
+      "slug": "r4-attachments",
+      "phase": "G3",
+      "env": "local",
+      "title": "R4: attachments in/out + artifact auto-return",
+      "spec": "Inbound attachments land in .teambot/inbox marked data-only (never parsed as commands); files under turns/out are auto-returned as Teams attachments.",
+      "acceptance": "Tests: inbound marked data-only; outbound artifact returned.",
+      "evidence": [
+        "attachments-test.txt"
+      ]
+    },
+    {
+      "id": "task050",
+      "slug": "metrics-instrumentation",
+      "phase": "G3",
+      "env": "local",
+      "title": "§9 metrics instrumentation + benchmark tasks",
+      "spec": "Wire a measurement pipeline for each metric (input chars via parser, approvals via audit log, heartbeat interval via status-model, outside-AgentHub via sandbox bypass). Define 3–5 representative benchmark tasks as the denominator.",
+      "acceptance": "Metrics emitted and asserted for the benchmark set; unmeasurable metrics documented as goals.",
+      "evidence": [
+        "metrics-test.txt"
+      ]
+    },
+    {
+      "id": "task051",
+      "slug": "p2-groups",
+      "phase": "G4",
+      "env": "live",
+      "title": "P2: group scenario",
+      "spec": "Deferred. When enabled: prefix required, approval codes via crypto.randomBytes, codes not exposed (route to DM), summary-only replies. architecture §5/§9 group sections marked deferred.",
+      "acceptance": "Deferred — no acceptance until scheduled.",
+      "evidence": [
+        "deferred.md"
+      ]
+    },
+    {
+      "id": "task052",
+      "slug": "p2-multisession",
+      "phase": "G4",
+      "env": "local",
+      "title": "P2: I multi-session (use latest / sessions / new)",
+      "spec": "Deferred. Multiple logical sessions per conversation; switch existing Codex threads.",
+      "acceptance": "Deferred — no acceptance until scheduled.",
+      "evidence": [
+        "deferred.md"
+      ]
+    },
+    {
+      "id": "task053",
+      "slug": "p2-history-import",
+      "phase": "G4",
+      "env": "local",
+      "title": "P2: K history import",
+      "spec": "Deferred. Import Codex history by cwd; bind an existing thread.",
+      "acceptance": "Deferred — no acceptance until scheduled.",
+      "evidence": [
+        "deferred.md"
+      ]
+    },
+    {
+      "id": "task054",
+      "slug": "p2-acl-roles",
+      "phase": "G4",
+      "env": "local",
+      "title": "P2: N ACL roles + audit_log",
+      "spec": "Deferred. allowed/admin/user roles (audit foundation from task031).",
+      "acceptance": "Deferred — no acceptance until scheduled.",
+      "evidence": [
+        "deferred.md"
+      ]
+    },
+    {
+      "id": "task055",
+      "slug": "p2-config-driven",
+      "phase": "G4",
+      "env": "local",
+      "title": "P2: O config-driven settings",
+      "spec": "Deferred. sandbox/approval/writable dirs/model defaults via config file.",
+      "acceptance": "Deferred — no acceptance until scheduled.",
+      "evidence": [
+        "deferred.md"
+      ]
     }
   ]
 }
