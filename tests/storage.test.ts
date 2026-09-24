@@ -6,7 +6,7 @@ const now = 1_700_000_000_000;
 
 test("schema is applied and versioned", () => {
   const s = new Store();
-  assert.equal(s.schemaVersion, 1);
+  assert.equal(s.schemaVersion, 2);
   s.close();
 });
 

@@ -37,7 +37,7 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task028 | G0 | live | [R0a: CDP editMessage feasibility spike](task028-r0a-editmessage-spike/README.md) | pending |
 | task029 | G0 | live | [R0b: notification economics + GO/PIVOT decision](task029-r0b-notification-economics/README.md) | pending |
 | task030 | G1 | local | [Governance: §4 reconciliation + traceability table](task030-governance-traceability/README.md) | pending |
-| task031 | G1 | local | [R9: append-only audit schema](task031-r9-audit-schema/README.md) | pending |
+| task031 | G1 | local | [R9: append-only audit schema](task031-r9-audit-schema/README.md) | DONE |
 | task032 | G1 | local | [R7a: path wall attribution + sandbox bypass tests](task032-r7a-path-wall-attribution/README.md) | pending |
 | task033 | G1 | local | [R7b: blacklist reframed as escalate-to-ask + adversarial tests](task033-r7b-blacklist-reframe/README.md) | pending |
 | task034 | G1 | local | [R7c: read/write asymmetry + read-only reference allow-list (Q5)](task034-r7c-read-write-asymmetry/README.md) | pending |

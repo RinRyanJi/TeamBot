@@ -2,6 +2,7 @@
 // Transactional writes; single source of local state (architecture §6/§7/§8).
 import { DatabaseSync } from "node:sqlite";
 import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.ts";
+import { redactString } from "../util/redact.ts";
 
 export interface Pairing {
   id: string;
@@ -64,6 +65,45 @@ export interface OutboxRow {
   status: "pending" | "sent" | "unknown";
   createdAt: number;
   sentAt: number | null;
+}
+
+export type AuditDecision =
+  | "deny"
+  | "allow"
+  | "whitelist-add"
+  | "whitelist-remove"
+  | "approve"
+  | "deny-approval";
+
+export interface AuditEntry {
+  at: number;
+  senderId?: string;
+  conversation?: string;
+  projectId?: string;
+  decision: AuditDecision;
+  rule?: string;
+  command?: string;
+}
+
+export interface AuditRow {
+  id: number;
+  at: number;
+  senderId: string;
+  conversation: string;
+  projectId: string;
+  decision: AuditDecision;
+  rule: string;
+  command: string;
+}
+
+export interface WhitelistEntry {
+  id: number;
+  projectId: string;
+  pattern: string;
+  addedBy: string;
+  addedAt: number;
+  expiresAt: number | null;
+  lastHitAt: number | null;
 }
 
 export class Store {
@@ -517,5 +557,110 @@ export class Store {
       .prepare(`DELETE FROM ${table} WHERE ${tsColumn} < ?`)
       .run(cutoff);
     return Number(res.changes);
+  }
+
+  // --- audit (R9 / PRD §6.4): append-only; command text stored already-redacted ---
+  /** Append one audit row. The command field is redacted defensively before write. */
+  appendAudit(e: AuditEntry): number {
+    const res = this.db
+      .prepare(
+        `INSERT INTO audit (at,senderId,conversation,projectId,decision,rule,command)
+         VALUES (?,?,?,?,?,?,?)`,
+      )
+      .run(
+        e.at,
+        e.senderId ?? "",
+        e.conversation ?? "",
+        e.projectId ?? "",
+        e.decision,
+        e.rule ?? "",
+        redactString(e.command ?? ""),
+      );
+    return Number(res.lastInsertRowid);
+  }
+
+  listAudit(limit = 100): AuditRow[] {
+    const rows = this.db
+      .prepare("SELECT * FROM audit ORDER BY id DESC LIMIT ?")
+      .all(limit) as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      id: r.id as number,
+      at: r.at as number,
+      senderId: r.senderId as string,
+      conversation: r.conversation as string,
+      projectId: r.projectId as string,
+      decision: r.decision as AuditDecision,
+      rule: r.rule as string,
+      command: r.command as string,
+    }));
+  }
+
+  auditCount(): number {
+    const row = this.db.prepare("SELECT COUNT(*) AS n FROM audit").get() as { n: number };
+    return row.n;
+  }
+
+  // --- whitelist (R7d): per-project precise command patterns ---
+  addWhitelist(
+    projectId: string,
+    pattern: string,
+    at: number,
+    addedBy = "",
+    expiresAt: number | null = null,
+  ): number {
+    const res = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO whitelist (projectId,pattern,addedBy,addedAt,expiresAt)
+         VALUES (?,?,?,?,?)`,
+      )
+      .run(projectId, pattern, addedBy, at, expiresAt);
+    return Number(res.lastInsertRowid);
+  }
+
+  listWhitelist(projectId: string): WhitelistEntry[] {
+    const rows = this.db
+      .prepare("SELECT * FROM whitelist WHERE projectId=? ORDER BY id")
+      .all(projectId) as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      id: r.id as number,
+      projectId: r.projectId as string,
+      pattern: r.pattern as string,
+      addedBy: r.addedBy as string,
+      addedAt: r.addedAt as number,
+      expiresAt: (r.expiresAt as number | null) ?? null,
+      lastHitAt: (r.lastHitAt as number | null) ?? null,
+    }));
+  }
+
+  /** Remove a whitelist entry by its 1-based position within the project (as shown to the user). */
+  removeWhitelistByIndex(projectId: string, index1Based: number): WhitelistEntry | null {
+    return this.transaction(() => {
+      const list = this.listWhitelist(projectId);
+      const entry = list[index1Based - 1];
+      if (!entry) return null;
+      this.db.prepare("DELETE FROM whitelist WHERE id=?").run(entry.id);
+      return entry;
+    });
+  }
+
+  /** True if `command` matches a non-expired whitelist entry for the project; records the hit. */
+  whitelistMatches(projectId: string, command: string, now: number): boolean {
+    const rows = this.db
+      .prepare("SELECT * FROM whitelist WHERE projectId=? AND pattern=?")
+      .all(projectId, command) as Array<Record<string, unknown>>;
+    for (const r of rows) {
+      const expiresAt = (r.expiresAt as number | null) ?? null;
+      if (expiresAt !== null && now > expiresAt) continue;
+      this.db.prepare("UPDATE whitelist SET lastHitAt=? WHERE id=?").run(now, r.id as number);
+      return true;
+    }
+    return false;
+  }
+
+  /** Whitelist entries at/after their TTL, for a "keep or drop?" prompt. */
+  expiringWhitelist(projectId: string, now: number): WhitelistEntry[] {
+    return this.listWhitelist(projectId).filter(
+      (e) => e.expiresAt !== null && now >= e.expiresAt,
+    );
   }
 }
