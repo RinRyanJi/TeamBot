@@ -48,6 +48,16 @@
   <h1>🤖 TeamBot — PRD v3</h1>
   <p class="sub">以「<strong>怎麼用才方便</strong>」重寫。v2 是功能表;v3 從<strong>使用時刻</strong>往回推,砍掉了功能、也改了安全模型。2026-09-24</p>
 
+  <div class="callout">
+    <h4>🔎 評審修訂(PM/RD/QA/USER/SEC 五角色會議)</h4>
+    <p>本版經多角色評審 + <strong>程式碼核實</strong>,修正多處「把研究性風險與零實作標成 ✅、把安全邊界外包給 Codex 卻寫成自家硬牆」。以下為核實的實作落差(<code>file:line</code>):</p>
+    <p>• <strong>串流就地編輯零實作</strong>:transport 只有 <code>sendMessage</code>,無 <code>editMessage</code> — §5 那張「編輯不推播」表<strong>目前一行都跑不出來</strong>(<code>transport.ts:20</code>)</p>
+    <p>• <strong>stop/kill/steer 未接線</strong>:coordinator 明寫 Phase 2 — 手機看到跑歪<strong>現在無法叫停</strong>(<code>coordinator.ts:113</code>)</p>
+    <p>• <strong>路徑硬牆是 Codex sandbox 在擋,不是 TeamBot</strong>:<code>isPathAllowed</code> 只做靜態字串,realpath 只在註解 TODO(<code>guards.ts:7</code>)</p>
+    <p>• <strong>稽核零地基</strong>:無 audit 表;<strong>批准碼</strong> seed=1 LCG 可離線預算;<strong>TTL</strong> 2分/30分/15分三方不一致</p>
+    <p>完整對帳表與 PIVOT 備案見 <code>docs/PRD.md §0.5 / §6.5</code>。此 HTML 為概覽,以 PRD.md 為準。</p>
+  </div>
+
   <div class="grid">
     <div class="card"><h4>轉向 ① 推播經濟學成為骨架</h4>
       <p>「什麼時候可以吵你」不是細節,它決定這產品在手機上活不活得下去。進度用<strong>編輯</strong>(安靜),要你做事才用<strong>新訊息</strong>(響)。</p></div>
@@ -230,12 +240,12 @@
     <tr><th>你會打的</th><th>意思</th><th>狀態</th></tr>
     <tr><td><code>!tb &lt;一句話&gt;</code></td><td>交辦,預設 AgentHub</td><td><span class="pill done">✅</span></td></tr>
     <tr><td><code>ok</code> / <code>no</code></td><td>批准/拒絕<strong>唯一</strong>待決(免代碼)</td><td><span class="pill p0">🔜 R1 · P0</span></td></tr>
-    <tr><td>(執行中直接打字)</td><td>中途轉向 <code>turn/steer</code></td><td><span class="pill done">引擎 ✅</span></td></tr>
-    <tr><td><code>!tb status</code></td><td>拉快照</td><td><span class="pill done">✅</span></td></tr>
+    <tr><td>(執行中直接打字)</td><td>中途轉向 <code>turn/steer</code></td><td><span class="pill plan">引擎存在·指令未接</span></td></tr>
+    <tr><td><code>!tb status</code> / <code>?</code> / <code>s</code></td><td>拉快照(PIVOT 時主要進度來源)</td><td><span class="pill done">✅</span></td></tr>
     <tr><td><code>!tb 細節</code> / <code>diff</code> / <code>檔案</code></td><td>展開細節</td><td><span class="pill plan">部分</span></td></tr>
-    <tr><td><code>!tb stop</code> / <code>kill</code></td><td>收尾停 / 硬停</td><td><span class="pill done">✅</span></td></tr>
+    <tr><td><code>!tb stop</code> / <code>kill</code></td><td>收尾停 / 硬停</td><td><span class="pill p0">未接線 → R8·P0</span></td></tr>
     <tr><td><code>!tb unlock 30</code> / <code>lock</code></td><td>開放 <strong>AgentHub 內</strong>寫入 30 分鐘(<strong>不擴大路徑範圍</strong>)</td><td><span class="pill done">✅</span></td></tr>
-    <tr><td><code>ok 2</code> / <code>no 2</code></td><td>多筆待決時指定<strong>小序號</strong>(非隨機碼)</td><td><span class="pill plan">✅ 改序號 🔜</span></td></tr>
+    <tr><td><code>ok 2</code> / <code>no 2</code></td><td>多筆待決時指定<strong>小序號</strong>(非隨機碼)</td><td><span class="pill plan">引擎存在·改序號 🔜</span></td></tr>
     <tr><td><code>ok 永遠</code> / <code>!tb 名單</code></td><td>加進本專案白名單 / 檢視名單</td><td><span class="pill p0">🔜 R7 · P0</span></td></tr>
     <tr><td><code>!tb 交接</code></td><td>印 thread/cwd,回電腦接手</td><td><span class="pill plan">🔜 R5</span></td></tr>
     <tr><td><code>!tb login</code> / <code>logout</code></td><td>Codex 裝置登入</td><td><span class="pill plan">🔜 R6</span></td></tr>
@@ -243,14 +253,16 @@
   <p class="sub" style="margin-top:8px"><strong>刻意不做</strong>:<code>run &lt;專案&gt;</code>、<code>sessions</code>、<code>use latest</code>、<code>new</code>——在單人 + 單一 AgentHub 場景下是<strong>多餘的選擇</strong>,只會讓人猶豫。</p>
 
   <h2>用便利重排之後,roadmap 優先序變了</h2>
-  <p class="sub" style="margin-top:-4px">這是 v3 相對 v2 最實質的產出:<strong>同一批候選功能,換個評分標準就換了順序</strong>。</p>
+  <p class="sub" style="margin-top:-4px">這是 v3 相對 v2 最實質的產出:<strong>同一批候選功能,換個評分標準就換了順序</strong>。<strong>P0 內部有依賴順序</strong>:R0 是 gate → R1/R7/R8/R9 可平行 → H 待 R0 GO 後開工。</p>
   <table>
     <tr><th>代號</th><th>需求</th><th>v2 位置</th><th>v3</th><th>為什麼變</th></tr>
     <tr><td><strong>R0</strong></td><td>驗證推播經濟學</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>它決定 §3.2/§5 成不成立,不驗證就開工等於賭</td></tr>
     <tr><td><strong>R7</strong></td><td><strong>硬牆 + 名單制</strong>:路徑越界直接拒、黑名單直接拒、白名單直接跑、<code>ok 永遠</code></td><td>v2 是「危險操作一律要問」</td><td><span class="pill p0">P0</span></td><td>比 R1 更根本:R1 降低<strong>單次</strong>成本,R7 降低<strong>次數</strong>。一般任務可做到 0 次批准</td></tr>
     <tr><td><strong>R1</strong></td><td>單一待決時 <code>ok</code> 免代碼</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>改動極小,直接解掉最痛的一步(11 字元 → 2 字元)</td></tr>
-    <tr><td><strong>H</strong></td><td>串流就地編輯接上 Teams</td><td>roadmap 第 1 項</td><td><span class="pill p0">P0</span></td><td>升級理由變了:它不只是好看,它是<strong>唯一能不吵你的手段</strong></td></tr>
-    <tr><td><strong>R3</strong></td><td>語音轉文字(原 M)</td><td>標「<strong>選用</strong>」</td><td><span class="pill plan">P1 ↑</span></td><td>手機打字是最大摩擦。這是手機場景的<strong>第一輸入法</strong>,不是選配</td></tr>
+    <tr><td><strong>R8</strong></td><td><strong>急停鍵</strong>:<code>stop</code> 接線(現 Phase 2 未接)</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>手機看到跑歪<strong>現在無法叫停</strong>,安全可用性缺口</td></tr>
+    <tr><td><strong>R9</strong></td><td><strong>稽核 schema</strong>:append-only 表</td><td>沒有這項</td><td><span class="pill p0">P0</span></td><td>所有「被拒/放行留痕」宣稱都靠它,現況連 schema 都沒有</td></tr>
+    <tr><td><strong>H</strong></td><td>串流就地編輯接上 Teams(依賴 R0)</td><td>roadmap 第 1 項</td><td><span class="pill p0">P0·待 R0</span></td><td>升級理由變了:它不只是好看,它是<strong>唯一能不吵你的手段</strong></td></tr>
+    <tr><td><strong>R3</strong></td><td>語音轉文字(需 spike + 回顯確認)</td><td>標「<strong>選用</strong>」</td><td><span class="pill plan">P1(未過降 P2)</span></td><td>手機打字是最大摩擦,但 CDP 能否取音檔未知、低可信輸入不可直通執行</td></tr>
     <tr><td><strong>R4</strong></td><td>附件 in/out + 產物自動回傳(原 J)</td><td>roadmap 中段</td><td><span class="pill plan">P1</span></td><td>「分享即交辦」是最自然的入口;產物不自動回傳等於沒完成</td></tr>
     <tr><td><strong>R6</strong></td><td>Codex 裝置登入(原 L)</td><td>roadmap 中段</td><td><span class="pill plan">P1</span></td><td>未登入時<strong>靜默失敗</strong>是最糟的體驗</td></tr>
     <tr><td><strong>R5</strong></td><td><code>!tb 交接</code></td><td>沒有這項</td><td><span class="pill plan">P1</span></td><td>「手機↔電腦同一 thread」的賣點只差一個指令就能兌現</td></tr>
@@ -277,16 +289,16 @@
 
   <h2>待決(需要你拍板)</h2>
   <div class="grid">
-    <div class="card"><h4>1 · 自己聊天免前綴,預設開還關?</h4><p>開了最方便,但若你把自己聊天當筆記本會誤送。<strong>建議:預設關,首次使用時問一次。</strong></p></div>
-    <div class="card"><h4>2 · 卡住警告的門檻?</h4><p><strong>建議 5 分鐘</strong>無任何 Codex 事件即示警。</p></div>
-    <div class="card"><h4>3 · 群組要不要做?</h4><p>目前所有設計都假設「自己聊天」。群組要加:前綴強制、批准碼不外曝、只回摘要。<strong>建議延後。</strong></p></div>
-    <div class="card"><h4>4 · <code>ok 永遠</code> 的白名單能反悔嗎?</h4><p><strong>建議做 <code>!tb 名單 移除 &lt;n&gt;</code></strong>,否則白名單只會長不會縮。</p></div>
-    <div class="card" style="grid-column:1/-1;border-color:rgba(210,153,34,.5)"><h4>5 · 讀取也受路徑硬牆限制嗎?</h4>
-      <p><strong>建議「是」</strong>——否則 Codex 可以讀 <code>C:\Users\…\.ssh</code> 再把內容寫進 AgentHub 的檔案裡,<strong>硬牆等於漏了</strong>。代價是不能叫它「參考一下隔壁專案的寫法」。這題直接決定硬牆有沒有意義。</p></div>
+    <div class="card"><h4>1 · 自己聊天免前綴,預設開還關?</h4><p><strong>決議:預設關,逃脫方向反轉</strong> — 預設當筆記、要送才加標記,避免漏標記誤送。decider: USER。</p></div>
+    <div class="card"><h4>2 · 卡住警告的門檻?</h4><p><strong>決議:預設 3 分、可設、遞增措辭</strong>;心跳改由 Codex 事件驅動(否則卡死照跳=說謊)。decider: USER。</p></div>
+    <div class="card"><h4>3 · 群組要不要做?</h4><p><strong>決議:延後,且正式記錄降級</strong> — 群組自 architecture.md §5「首版必要」降 P2,該章節標 deferred。decider: SEC+PM。</p></div>
+    <div class="card"><h4>4 · <code>ok 永遠</code> 的白名單能反悔嗎?</h4><p><strong>決議:必做 <code>!tb 名單 移除 &lt;n&gt;</code></strong>,加樣式精確化 + TTL + 回顯加了什麼 pattern。decider: SEC。</p></div>
+    <div class="card" style="grid-column:1/-1;border-color:rgba(248,81,73,.5)"><h4>5 · 讀取也受路徑硬牆限制嗎?<span class="pill p0" style="margin-left:8px">需你拍板</span></h4>
+      <p>首版<strong>讀取預設拒</strong>(可測邊界,列出貨阻擋)。「唯讀參考白名單」降 P2,前提:realpath 落地 + 稽核落地 + 黑名單優先於白名單(機密路徑即使登記也硬拒)+ SEC 簽字。<strong>角色未收斂</strong>:SEC 主張全禁、USER 主張唯讀白名單(參考鄰近專案是高頻動作)。<strong>需你最終拍板 P2 是否開放。</strong></p></div>
   </div>
 
-  <h2>現況</h2>
-  <p class="sub">27 個 task 完成(測試 <strong>136 passed / 0 skipped</strong>);已整合進常駐 runner 並於<strong>真實 Teams + 真實 Codex</strong> 實測完整迴圈:接收 → read-only 執行 → 彙整回報 → 批准 → 重啟 <code>thread/resume</code> 連續。Phase 0 於真實租戶 = GO(穩定 id、送出、接收、隱藏背景收訊)。</p>
+  <h2>現況(以 PRD.md §0.5 對帳表為準)</h2>
+  <p class="sub"><strong>真的跑通的是管線,不是 PRD 承諾的體驗</strong>:27 task / 測試 136 passed;Phase 0 真實租戶 GO;CDP 傳輸(<strong>只有 sendMessage</strong>);常駐 session + <code>thread/resume</code> 連續;read-only/unlock 姿態;結果彙整;狀態模型;批准註冊表。<strong>未成立</strong>:串流就地編輯、急停(stop/kill 未接)、路徑 realpath、稽核、批准碼隨機性、TTL 一致。出貨前置 gate:R0/H spike → 補硬牆歸屬與稽核 → §4 假 ✅ 對帳。</p>
   <p class="sub"><strong>非目標(首版)</strong>:遷官方 Teams 傳輸(Graph / Bot Framework);跨組織多租戶;<strong>AgentHub 以外的任何存取</strong>(硬牆,不是「暫未支援」而是<strong>刻意不給</strong>);團隊協作型 ACL。</p>
 
   <div class="foot">
