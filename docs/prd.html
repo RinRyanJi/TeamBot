@@ -248,7 +248,7 @@
     <tr><td><code>ok 2</code> / <code>no 2</code></td><td>多筆待決時指定<strong>小序號</strong>(非隨機碼)</td><td><span class="pill plan">引擎存在·改序號 🔜</span></td></tr>
     <tr><td>(執行中純文字)</td><td>追加說明,併入當前輪(§3.7)</td><td><span class="pill plan">引擎存在·未接</span></td></tr>
     <tr><td><code>併</code> / <code>新</code> · (再交辦一件)</td><td>回答「追加還是另開」/ 再丟一件即排隊回報位置</td><td><span class="pill p0">🔜 R8</span></td></tr>
-    <tr><td><code>!tb 取消 &lt;n&gt;</code></td><td>移除排隊中(未開跑)的任務</td><td><span class="pill p0">🔜 R8</span></td></tr>
+    <tr><td><code>!tb 取消 &lt;n&gt;</code> / <code>取消 全部</code></td><td>移除排隊中(未開跑)的任務,單筆或全清(不動正在跑的)</td><td><span class="pill p0">🔜 R8</span></td></tr>
     <tr><td><code>ok 永遠</code> / <code>!tb 名單</code></td><td>加進本專案白名單 / 檢視名單</td><td><span class="pill p0">🔜 R7 · P0</span></td></tr>
     <tr><td><code>!tb 交接</code></td><td>印 thread/cwd,回電腦接手</td><td><span class="pill plan">🔜 R5</span></td></tr>
     <tr><td><code>!tb login</code> / <code>logout</code></td><td>Codex 裝置登入</td><td><span class="pill plan">🔜 R6</span></td></tr>
@@ -267,6 +267,9 @@
   <div class="grid" style="margin-top:12px">
     <div class="card"><h4>追加 vs 另開,怎麼分</h4><p>預設「執行中純文字」當<strong>追加(steer)</strong>;帶附件或明顯新目標則<strong>排下一件</strong>。<strong>拿不準不猜</strong>——回一句「併入當前還是另開?回 <code>併</code>/<code>新</code>」,寧可多問一次也不要污染正在跑的輪。</p></div>
     <div class="card"><h4>不打架</h4><p>steer 若正等批准 → steer 文字<strong>不當批准</strong>,排到批准解決後。喊停<strong>不受推播節流影響</strong>,立刻可用;<code>kill</code> 是唯一保證中斷失控輪的手段。停/完成後狀態卡不再掛 <code>⏳</code>。</p></div>
+    <div class="card" style="border-color:rgba(38,165,228,.4)"><h4>關手機 ≠ 停止任務</h4><p>任務跑在<strong>桌面 runner</strong>,手機只是遙控器。<strong>你的手機斷線</strong>→任務照跑,重連時 outbox 補送更新(<code>reconcileOutbox</code>)。這是常駐架構的好處:不必守著手機。</p></div>
+    <div class="card" style="border-color:rgba(210,153,34,.4)"><h4>runner 崩潰才是真中斷</h4><p>CDP 崩/Teams 重登/筆電休眠/帳號停權 → <code>thread/resume</code> 接回對話;<strong>in-flight job 標 unknown 不盲跑</strong>(可能已改一半檔,`markProcessLossUnknown`);離線窗有告知;離線一律回落 read-only。已實作於 <code>recovery.ts</code>。</p></div>
+    <div class="card"><h4>一次清空排隊</h4><p><code>!tb 取消 全部</code> / <code>清空</code> 移除<strong>所有排隊(未開跑)</strong>,<strong>正在跑的不受影響</strong>(要停用 <code>stop</code>/<code>kill</code>)。回報「已清除 N 件」。</p></div>
   </div>
 
   <h2>用便利重排之後,roadmap 優先序變了</h2>
