@@ -124,7 +124,7 @@ export function parseV4Command(raw: string, knownProjects: readonly string[] = [
       // Natural language after the prefix is a run request. A bare known
       // command still falls through as unknown so old strict parser behaviour
       // remains unchanged.
-      if (sub && !["help", "projects", "status", "result", "continue", "steer", "approve", "deny", "answer", "kill", "lock", "unlock"].includes(sub)) {
+      if (sub && !["help", "projects", "status", "result", "continue", "steer", "approve", "deny", "ok", "no", "answer", "kill", "lock", "unlock"].includes(sub)) {
         return { ok: true, command: { kind: "run", request: parts.slice(1).join(" ") } };
       }
       return { ok: false, reason: "unknown-command" };

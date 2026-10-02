@@ -69,6 +69,10 @@ test("mobile approval aliases ok/no map to the same explicit approval commands",
     command: { kind: "deny", code: "A2" },
   });
   assert.deepEqual(parseCommand("ok"), { ok: false, reason: "missing-args" });
+  assert.deepEqual(parseCommand("!tb ok A2"), {
+    ok: true,
+    command: { kind: "approve", code: "A2" },
+  });
 });
 
 test("both !tb and @tb prefixes are accepted", () => {
