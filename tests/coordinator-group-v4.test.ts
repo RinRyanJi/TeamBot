@@ -210,3 +210,43 @@ test("dangerous group approval is delivered to self chat and can be resolved the
   store.close();
 });
 
+test("task060 local scenario covers group gates end to end without sending Teams messages", async () => {
+  const store = new Store();
+  store.createJob({ jobId: "T-LOCAL-GROUP", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", threadId: "th-local", activeTurnId: "turn-local", status: "running", resultSummary: "private details", createdAt: 1 });
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", name: "TeamBot", aliases: ["tb"], cwd: "D:/tb" });
+  const group: Pairing = { id: "g", tenant: "t", account: "operator", chatId: "group", kind: "group", allowlist: ["operator", "viewer"], roles: { operator: "operator", viewer: "viewer" }, projects: ["TeamBot"], createdAt: 1 };
+  const self: Pairing = { id: "s", tenant: "t", account: "operator", chatId: "self", kind: "self", allowlist: ["operator"], projects: ["TeamBot"], createdAt: 1 };
+  const groupTransport = new Transport("group");
+  const selfTransport = new Transport("self");
+  const routes = new RoutedTeamsTransport(new Map([["group", groupTransport], ["self", selfTransport]]), "group");
+  const adapter = new ApprovalAdapter();
+  const groupCoord = new Coordinator({ store, transport: routes, adapter: adapter as unknown as CodexAdapter, projects, pairing: group, privateApprovalChatId: "self", now: () => 10 });
+
+  assert.equal((await groupCoord.handle(msg("local-projects", "viewer", "!tb projects"))).action, "projects");
+  assert.match(groupTransport.sent.at(-1) ?? "", /TeamBot/);
+  assert.equal((await groupCoord.handle(msg("local-viewer-run", "viewer", "!tb run TeamBot list files"))).action, "denied:group-role");
+  assert.equal(store.listJobs().filter((job) => job.jobId !== "T-LOCAL-GROUP").length, 0);
+  assert.equal((await groupCoord.handle(msg("local-overview", "operator", "!tb overview"))).action, "overview");
+  assert.match(groupTransport.sent.at(-1) ?? "", /T-LOCAL-GROUP/);
+  assert.doesNotMatch(groupTransport.sent.at(-1) ?? "", /private details/);
+
+  adapter.emit("serverRequest", { id: 88, method: "item/commandExecution/requestApproval", params: { threadId: "th-local", command: "git push" } });
+  await new Promise((resolve) => setImmediate(resolve));
+  const approval = store.listPendingApprovals()[0];
+  assert.ok(approval);
+  assert.equal(approval.chatId, "self");
+  assert.ok(selfTransport.sent.some((text) => text.includes(approval.code)));
+  assert.equal(groupTransport.sent.some((text) => text.includes(approval.code)), false);
+  const selfCoord = new Coordinator({ store, transport: routes, adapter: adapter as unknown as CodexAdapter, projects, pairing: self, now: () => 10 });
+  assert.equal((await selfCoord.handle(msg("local-approve", "operator", `ok ${approval.code}`, "self"))).action, "approve");
+
+  assert.equal((await groupCoord.handle(msg("local-cross-chat", "viewer", "!tb task T-LOCAL-GROUP", "other-group"))).action, "ignored:wrong-conversation");
+  store.updateJobMetadata("T-LOCAL-GROUP", { executionStatus: "execution_unknown" });
+  store.updateJobStatus("T-LOCAL-GROUP", "needs_reconciliation", "offline gap");
+  assert.equal((await groupCoord.handle(msg("local-recovery", "viewer", "!tb overview"))).action, "overview");
+  assert.match(groupTransport.sent.at(-1) ?? "", /T-LOCAL-GROUP/);
+  assert.match(groupTransport.sent.at(-1) ?? "", /needs_reconciliation|execution_unknown/);
+  store.close();
+});
+

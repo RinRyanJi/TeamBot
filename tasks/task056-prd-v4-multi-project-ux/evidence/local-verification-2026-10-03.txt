@@ -5,8 +5,8 @@ Repository: TeamBot
 
 Commands and results:
 
-- `npm test` — 188 tests passed, 0 failed, 0 skipped.
-- `npm run test:v4` — 51 tests passed, 0 failed, 0 skipped. This includes UC-01 through UC-12 fixtures plus group source-binding and recovery visibility checks.
+- `npm test` — 189 tests passed, 0 failed, 0 skipped.
+- `npm run test:v4` — 52 tests passed, 0 failed, 0 skipped. This includes UC-01 through UC-12 fixtures plus the end-to-end task060 local group scenario, source binding and recovery visibility checks.
 - `npm run typecheck` — exit 0.
 - `npm run build` — exit 0.
 - `node --experimental-strip-types --check scripts/e2e-v4-run.ts` — exit 0.

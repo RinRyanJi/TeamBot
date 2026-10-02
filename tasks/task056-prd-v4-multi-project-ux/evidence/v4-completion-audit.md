@@ -15,7 +15,7 @@ The current run is recorded in [local-verification-2026-10-03.txt](local-verific
 
 Observed evidence:
 
-- 188 tests passed, including the 51-test v4 suite with all 12 User Cases v4 fixtures, coordinator result folding, task detail summaries, group source binding, recovery visibility, and `completed_with_followup` for failed commands.
+- 189 tests passed, including the 52-test v4 suite with all 12 User Cases v4 fixtures, the end-to-end task060 local group scenario, coordinator result folding, task detail summaries, group source binding, recovery visibility, and `completed_with_followup` for failed commands.
 - Project-first routing refuses ambiguous self-chat requests and accepts focused natural language.
 - Project profiles reject alias/name collisions, enforce conversation bindings, and expose safe display data.
 - Desktop onboarding now provides a local registration/edit/remove form with absolute-path validation and an atomic user-data `projects.json`; the runtime can load that file without putting paths in shell history.
@@ -39,4 +39,5 @@ Observed evidence:
 - Teams message extraction rejects generic accessibility/announcement identifiers as sender IDs; the Playwright read path, MutationObserver path, and Phase 0 harness use the same bounded sender lookup.
 - The Teams adapter also falls back to `data-person-mri` on newer DOMs and filters senderless system rows before they reach the command inbox.
 - A fresh-database runtime smoke reached `RUNTIME_READY` against the authenticated app-owned Teams surface without sending a message; task060 interaction gates remain separate.
+- The task060 local scenario now runs project listing, viewer denial, group summary, private approval routing, cross-chat rejection and recovery overview in one fixture without sending Teams messages.
 - The live harness is non-sending by design. Real Teams tenant, phone and group evidence remains in task060 and requires a user-run disposable-chat session.
