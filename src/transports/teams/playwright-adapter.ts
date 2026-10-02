@@ -148,13 +148,27 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
       var SENDER = ${JSON.stringify(p.senderAttr)};
       var MSG = ${JSON.stringify(p.messageSelector)};
       var seen = new Set();
+      var validSender = function (value) {
+        return !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+      };
+      var senderFor = function (el) {
+        var nested = el.querySelector('[' + SENDER + ']');
+        var nestedValue = nested ? nested.getAttribute(SENDER) : null;
+        if (validSender(nestedValue)) return nestedValue;
+        var current = el;
+        for (var depth = 0; current && depth < 8; depth++, current = current.parentElement) {
+          var own = current.getAttribute(SENDER);
+          if (validSender(own)) return own;
+        }
+        return '';
+      };
       var read = function (el) {
         var id = el.getAttribute(MID);
         if (!id || seen.has(id)) return;
         seen.add(id);
-        var s = el.getAttribute(SENDER);
-        if (!s) { var inner = el.querySelector('[' + SENDER + ']'); s = inner ? inner.getAttribute(SENDER) : ''; }
-        w.__teambotPush({ messageId: id, senderId: s || '', text: (el.textContent || '').trim() });
+        var sender = senderFor(el);
+        if (!sender) return;
+        w.__teambotPush({ messageId: id, senderId: sender, text: (el.textContent || '').trim() });
       };
       document.querySelectorAll(MSG).forEach(function (el) { var id = el.getAttribute(MID); if (id) seen.add(id); });
       var obs = new MutationObserver(function (muts) {
@@ -182,11 +196,15 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
       this.profile.messageSelector,
       (els, p) =>
         els.map((el) => {
-          let senderId = el.getAttribute(p.senderAttr);
-          if (!senderId) {
-            const inner = el.querySelector("[" + p.senderAttr + "]");
-            const outer = el.closest("[" + p.senderAttr + "]");
-            senderId = (inner && inner.getAttribute(p.senderAttr)) || (outer && outer.getAttribute(p.senderAttr)) || "";
+          const validSender = (value: string | null): value is string => Boolean(value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value));
+          let senderId = "";
+          const nested = el.querySelector("[" + p.senderAttr + "]");
+          const nestedValue = nested?.getAttribute(p.senderAttr) ?? null;
+          if (validSender(nestedValue)) senderId = nestedValue;
+          let current: typeof el | null = el;
+          for (let depth = 0; !senderId && current && depth < 8; depth += 1, current = current.parentElement) {
+            const own = current.getAttribute(p.senderAttr);
+            if (validSender(own)) { senderId = own; break; }
           }
           return {
             messageId: el.getAttribute(p.messageIdAttr) ?? "",

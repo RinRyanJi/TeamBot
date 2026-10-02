@@ -63,11 +63,22 @@ const PROBE_JS = `(() => {
   const threadEl = document.querySelector('[data-track-thread-id]');
   const chatId = threadEl ? threadEl.getAttribute('data-track-thread-id') : null;
   const msgEls = Array.from(document.querySelectorAll('[data-mid]'));
+  const validSender = (value) => !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+  const senderFor = (el) => {
+    const nested = el.querySelector('[data-acc-id]');
+    const nestedValue = nested ? nested.getAttribute('data-acc-id') : null;
+    if (validSender(nestedValue)) return nestedValue;
+    let current = el;
+    for (let depth = 0; current && depth < 8; depth++, current = current.parentElement) {
+      const own = current.getAttribute('data-acc-id');
+      if (validSender(own)) return own;
+    }
+    return null;
+  };
   const messages = msgEls.slice(-10).map((el) => {
-    const accEl = el.matches('[data-acc-id]') ? el : (el.querySelector('[data-acc-id]') || el.closest('[data-acc-id]'));
     return {
       messageId: el.getAttribute('data-mid'),
-      senderId: accEl ? accEl.getAttribute('data-acc-id') : null,
+      senderId: senderFor(el),
       hasText: !!(el.textContent && el.textContent.trim()),
     };
   });
@@ -126,9 +137,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Current messages in the open conversation (real Teams v2 selectors).
 const MSG_JS = `(() => {
   const els = Array.from(document.querySelectorAll('[data-mid]'));
+  const validSender = (value) => !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+  const senderFor = (el) => {
+    const nested = el.querySelector('[data-acc-id]');
+    const nestedValue = nested ? nested.getAttribute('data-acc-id') : null;
+    if (validSender(nestedValue)) return nestedValue;
+    let current = el;
+    for (let depth = 0; current && depth < 8; depth++, current = current.parentElement) {
+      const own = current.getAttribute('data-acc-id');
+      if (validSender(own)) return own;
+    }
+    return null;
+  };
   return els.map((el) => {
-    const a = el.querySelector('[data-acc-id]') || el.closest('[data-acc-id]');
-    return { messageId: el.getAttribute('data-mid'), senderId: a ? a.getAttribute('data-acc-id') : null, text: (el.textContent || '').trim().slice(0, 160) };
+    return { messageId: el.getAttribute('data-mid'), senderId: senderFor(el), text: (el.textContent || '').trim().slice(0, 160) };
   });
 })()`;
 
@@ -163,7 +185,17 @@ async function doSendTest(wc, outDir, fs) {
       const hit = els.find((e) => (e.textContent || '').includes(${JSON.stringify(marker)}));
       const t = document.querySelector('[data-track-thread-id]');
       let senderId = null;
-      if (hit) { const a = hit.querySelector('[data-acc-id]') || hit.closest('[data-acc-id]'); senderId = a ? a.getAttribute('data-acc-id') : null; }
+      if (hit) {
+        const validSender = (value) => !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+        let current = hit;
+        const nested = hit.querySelector('[data-acc-id]');
+        const nestedValue = nested ? nested.getAttribute('data-acc-id') : null;
+        if (validSender(nestedValue)) senderId = nestedValue;
+        for (let depth = 0; !senderId && current && depth < 8; depth++, current = current.parentElement) {
+          const own = current.getAttribute('data-acc-id');
+          if (validSender(own)) { senderId = own; break; }
+        }
+      }
       return { found: !!hit, messageId: hit ? hit.getAttribute('data-mid') : null, senderId, threadId: t ? t.getAttribute('data-track-thread-id') : null };
     })()`,
   );

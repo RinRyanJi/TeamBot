@@ -35,6 +35,17 @@ test("teams profile: read via real selectors, send via contenteditable+Enter, re
     assert.equal(initial[0]?.senderId, "8:orgid:user-alice");
     assert.match(initial[0]?.text ?? "", /check login/);
 
+    // A generic accessibility/announcement node must never be treated as an author.
+    const page = (adapter as unknown as { page: import("playwright-core").Page }).page;
+    await page.evaluate(`(() => {
+      var d = document.createElement('div');
+      d.setAttribute('data-mid', '1700000000099');
+      var a = document.createElement('span'); a.setAttribute('data-acc-id', 'announcing-region-message-list'); a.textContent = 'announcement';
+      d.appendChild(a); document.getElementById('messages').appendChild(d);
+    })()`);
+    const generic = (await adapter.readMessages()).find((m) => m.messageId === "1700000000099");
+    assert.equal(generic?.senderId, "");
+
     // Send via the contenteditable + Enter path, then reconcile by data-mid.
     const id = await adapter.sendMessage("[TB T001] started");
     assert.match(id, /^\d+$/);

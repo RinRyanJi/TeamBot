@@ -69,6 +69,17 @@ test("MutationObserver pushes new messages over CDP; dedupes existing ids", asyn
     assert.equal(pushed[0]?.senderId, "8:orgid:pusher");
     assert.match(pushed[0]?.text ?? "", /hello from observer/);
 
+    // A generic announcement-region id is not a sender identity and must be ignored.
+    await page.evaluate(`(() => {
+      var d = document.createElement('div');
+      d.className = 'chat-pane-message';
+      d.setAttribute('data-mid', '9000002');
+      var a = document.createElement('span'); a.setAttribute('data-acc-id', 'announcing-region-message-list'); a.textContent = 'announcement';
+      d.appendChild(a); document.getElementById('messages').appendChild(d);
+    })()`);
+    await sleep(300);
+    assert.equal(pushed.length, 1, "generic announcement identity is not pushed as a sender");
+
     // Re-inject a node carrying an EXISTING baseline id -> must be deduped (not pushed).
     await page.evaluate(`(() => {
       var d = document.createElement('div');

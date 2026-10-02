@@ -36,4 +36,5 @@ Observed evidence:
 - `rename`, `diff`, `files`, `artifact`, `stop`, `kill`, `ok` and `no` have explicit parsers and authorization paths.
 - A group viewer cannot invoke the legacy `!tb kill` control; an authorized hard stop records `execution_unknown` plus `needs_reconciliation` instead of presenting an ordinary failure.
 - Coordinator entrypoints reject messages whose tenant or chat ID does not match the configured pairing, and group overview keeps recovery task/project identity visible.
+- Teams message extraction rejects generic accessibility/announcement identifiers as sender IDs; the Playwright read path, MutationObserver path, and Phase 0 harness use the same bounded sender lookup.
 - The live harness is non-sending by design. Real Teams tenant, phone and group evidence remains in task060 and requires a user-run disposable-chat session.
