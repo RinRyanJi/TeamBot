@@ -39,10 +39,10 @@ const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
     "needs_reconciliation",
     "merge-pending",
   ],
-  waiting_input: ["running", "stopping", "failed", "interrupted", "unknown"],
-  waiting_approval: ["running", "stopping", "failed", "interrupted", "unknown"],
+  waiting_input: ["running", "stopping", "failed", "interrupted", "unknown", "execution_unknown", "needs_reconciliation"],
+  waiting_approval: ["running", "stopping", "failed", "interrupted", "unknown", "execution_unknown", "needs_reconciliation"],
   // Stop may race with a real completion/failure that was already in flight.
-  stopping: ["cancelled", "completed", "failed"],
+  stopping: ["cancelled", "completed", "failed", "execution_unknown", "needs_reconciliation"],
   // After reconciliation an interrupted/unknown job resolves to a definite state.
   interrupted: ["running", "completed", "failed", "cancelled", "unknown", "execution_unknown", "needs_reconciliation"],
   unknown: ["running", "completed", "failed", "cancelled", "interrupted", "execution_unknown", "needs_reconciliation"],
