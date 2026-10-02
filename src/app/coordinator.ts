@@ -32,6 +32,11 @@ function stringField(value: unknown, ...keys: string[]): string | undefined {
   return undefined;
 }
 
+function pathTail(value: string): string {
+  const parts = value.split(/[\\/]+/).filter(Boolean);
+  return parts.slice(-2).join("/") || value;
+}
+
 function nestedItem(payload: unknown): Record<string, unknown> {
   const rec = recordOf(payload);
   return recordOf(rec.item ?? payload);
@@ -135,6 +140,7 @@ export class Coordinator {
   private seq = 0;
   private cancelled = new Set<string>();
   private pendingForks = new Map<string, { chatId: string; senderId: string; request: string }>();
+  private pendingProjectChoices = new Map<string, { senderId: string; request: string; projectIds: string[]; expiresAt: number }>();
   private pendingInputs = new Map<string, { requestId: number; jobId: string; chatId: string; expiresAt: number }>();
   private inputSeq = 0;
   private runRequests = new Map<string, { projectId: string; request: string; msg: InboxMessage; options: RunOptions; resolve: (r: HandleResult) => void; reject: (e: unknown) => void }>();
@@ -170,6 +176,9 @@ export class Coordinator {
       this.contexts.focus(msg.chatId, persistedContext.activeProjectId, persistedContext.updatedAt);
     }
 
+    const selectedProject = await this.tryResolveProjectChoice(msg);
+    if (selectedProject) return selectedProject;
+
     const v4 = parseV4Command(msg.text, this.projects.list());
     if (v4.ok) {
       this.store.markDispatched(msg.tenant, msg.chatId, msg.messageId);
@@ -185,8 +194,7 @@ export class Coordinator {
           return this.run(resolution.project.projectId, msg.text.trim(), msg);
         }
         if (resolution.kind === "ambiguous") {
-          const choices = resolution.candidates.filter((p) => this.projectAllowed(p.projectId, msg.chatId)).map((p, i) => `${i + 1}. ${p.name} (${p.projectId})`).join("\n");
-          await this.reply("sys", `請先選擇專案，再送出要求：\n${choices}`, msg.chatId);
+          await this.askProjectChoice(msg, msg.text.trim(), resolution.candidates);
           this.store.markDispatched(msg.tenant, msg.chatId, msg.messageId);
           return { action: "project:clarification-required" };
         }
@@ -321,7 +329,13 @@ export class Coordinator {
 
     switch (command.kind) {
       case "overview":
-        await this.reply("sys", formatOverview(this.store.listJobs(this.pairing.kind === "group" ? msg.chatId : undefined), this.projects, 8, this.availableProjectIds(msg.chatId)), msg.chatId);
+        await this.reply("sys", formatOverview(
+          this.store.listJobs(this.pairing.kind === "group" ? msg.chatId : undefined),
+          this.projects,
+          8,
+          this.availableProjectIds(msg.chatId),
+          { summaryOnly: this.pairing.kind === "group" },
+        ), msg.chatId);
         return { action: "overview" };
       case "status": {
         const job = this.store.getJob(command.jobId);
@@ -351,8 +365,7 @@ export class Coordinator {
           return { action: command.projectId ? "denied:project-not-authorized" : "run:no-project" };
         }
         if (resolution.kind === "ambiguous") {
-          const names = resolution.candidates.filter((p) => this.projectAllowed(p.projectId, msg.chatId)).map((p) => `${p.name} (${p.projectId})`);
-          await this.reply("sys", `請先指定專案：${names.join(", ") || "(沒有可用專案)"}\n例如：!tb focus <project>`, msg.chatId);
+          await this.askProjectChoice(msg, command.request, resolution.candidates);
           return { action: "run:ambiguous" };
         }
         if (!this.projectAllowed(resolution.project.projectId, msg.chatId)) {
@@ -374,8 +387,10 @@ export class Coordinator {
           await this.reply("sys", "這個工作屬於另一個聊天，無法查看。", msg.chatId);
           return { action: "task:denied" };
         }
-        const details = command.details ? formatTaskDetails(this.store.listEvents(job.jobId)) : "";
-        await this.reply(job.jobId, formatTask(job, this.projects.get(job.projectId)?.name) + details, msg.chatId);
+        const groupSummary = this.pairing.kind === "group";
+        const details = command.details && !groupSummary ? formatTaskDetails(this.store.listEvents(job.jobId)) : "";
+        const artifacts = groupSummary ? [] : this.store.listArtifacts(job.jobId).map((artifact) => ({ path: artifact.path, kind: artifact.kind }));
+        await this.reply(job.jobId, formatTask(job, this.projects.get(job.projectId)?.name, { summaryOnly: groupSummary, artifacts }) + details, msg.chatId);
         return { action: "task", jobId: job.jobId };
       }
       case "rename": {
@@ -401,7 +416,9 @@ export class Coordinator {
           ? `檔案（${job.changedFiles?.length ?? 0}）：${job.changedFiles?.join(", ") || "(尚無)"}`
           : command.kind === "artifact"
             ? `產物（${artifacts.length}）：${artifacts.map((artifact) => `${artifact.path} · ${artifact.kind}`).join(", ") || (job.resultSummary ?? job.lastResult ?? "(尚無)")}`
-            : `Diff 摘要：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`;
+            : this.pairing.kind === "group"
+              ? `Diff 摘要：${job.changedFiles?.length ?? 0} 檔變更；完整內容請由發起人在自己聊天查看。`
+              : `Diff 摘要：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`;
         await this.reply(job.jobId, body, msg.chatId);
         return { action: command.kind, jobId: job.jobId };
       }
@@ -421,22 +438,43 @@ export class Coordinator {
             return { action: "add:not-ready", jobId: base.jobId };
           }
           let addedResult = "";
+          let expectedTurnId = "";
+          let onItem = (_p: unknown): void => undefined;
+          let onTurn = (_p: unknown): void => undefined;
+          const cleanup = (): void => {
+            this.adapter.off("item/completed", onItem);
+            this.adapter.off("turn/completed", onTurn);
+          };
           const completed = new Promise<void>((resolve) => {
-            const onTurn = (): void => {
-              this.adapter.off("item/completed", onItem);
-              resolve();
-            };
-            const onItem = (p: unknown): void => {
-              const text = (p as { text?: string })?.text;
+            onItem = (p: unknown): void => {
+              if (!eventBelongs(p, base.threadId!, expectedTurnId)) return;
+              const item = nestedItem(p);
+              const text = stringField(item, "text") ?? stringField(p, "text");
               if (text) addedResult = text;
             };
+            onTurn = (p: unknown): void => {
+              if (!eventBelongs(p, base.threadId!, expectedTurnId)) return;
+              cleanup();
+              resolve();
+            };
             this.adapter.on("item/completed", onItem);
-            this.adapter.once("turn/completed", onTurn);
+            this.adapter.on("turn/completed", onTurn);
           });
           this.store.updateJobStatus(base.jobId, "running");
-          const turn = (await this.adapter.startTurn({ threadId: base.threadId, input: command.request })) as { turnId?: string };
-          this.store.setJobThread(base.jobId, base.threadId, turn.turnId);
-          await completed;
+          try {
+            const turn = (await this.adapter.startTurn({ threadId: base.threadId, input: command.request })) as { turnId?: string };
+            expectedTurnId = turn.turnId ?? "";
+            this.store.setJobThread(base.jobId, base.threadId, turn.turnId);
+            await completed;
+          } catch (error) {
+            cleanup();
+            const detail = error instanceof Error ? error.message : "追加執行失敗";
+            const unknown = /process|exit|disconnect|transport/i.test(detail);
+            this.store.updateJobMetadata(base.jobId, { executionStatus: unknown ? "execution_unknown" : "known" });
+            this.store.updateJobStatus(base.jobId, unknown ? "needs_reconciliation" : "failed", detail);
+            await this.reply(base.jobId, `追加執行失敗：${detail}`, msg.chatId);
+            return { action: "add:failed", jobId: base.jobId };
+          }
           this.store.updateJobStatus(base.jobId, this.cancelled.has(base.jobId) ? "cancelled" : "completed", addedResult);
           await this.reply(base.jobId, `已追加並完成；結果：${addedResult || "(無輸出)"}`, msg.chatId);
           return { action: "added", jobId: base.jobId };
@@ -594,7 +632,10 @@ export class Coordinator {
             `交接：${this.projects.get(job.projectId)?.name ?? job.projectId} / ${job.jobId}`,
             `thread：${job.threadId ?? "尚未建立"}`,
             `turn：${job.activeTurnId ?? "尚未建立"}`,
-            `cwd：${job.worktreePath ?? job.cwd}`,
+            `工作區：${job.worktreePath ? pathTail(job.worktreePath) : "主工作區（依 Project 設定）"}`,
+            `變更檔案：${job.changedFiles?.join(", ") || "(尚無)"}`,
+            `結果摘要：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`,
+            `桌面接手：codex resume ${job.threadId ?? "<threadId>"}`,
             `桌面端請接續此 thread；worktree 完成後仍需明確合併。`,
           ].join("\n"), msg.chatId);
           return { action: "handoff", jobId: command.jobId };
@@ -618,6 +659,41 @@ export class Coordinator {
     if (!this.pairing.projects.includes(projectId)) return false;
     const project = this.projects.get(projectId);
     return !project?.conversationBindings?.length || project.conversationBindings.includes(chatId);
+  }
+
+  private async askProjectChoice(
+    msg: InboxMessage,
+    request: string,
+    candidates: readonly import("./projects.ts").ProjectDef[],
+  ): Promise<void> {
+    const available = candidates.filter((project) => this.projectAllowed(project.projectId, msg.chatId)).slice(0, 3);
+    this.pendingProjectChoices.set(msg.chatId, {
+      senderId: msg.senderId,
+      request,
+      projectIds: available.map((project) => project.projectId),
+      expiresAt: this.now() + 5 * 60_000,
+    });
+    const choices = available.map((project, index) => `${index + 1}. ${project.name ?? project.projectId} (${project.projectId})`).join("\n");
+    await this.reply("sys", `請先選擇專案（目前要求有多個候選，避免送錯 repo）：\n${choices || "(沒有可用專案)"}\n請回覆 1-${available.length}。`, msg.chatId);
+  }
+
+  private async tryResolveProjectChoice(msg: InboxMessage): Promise<HandleResult | undefined> {
+    const pending = this.pendingProjectChoices.get(msg.chatId);
+    if (!pending) return undefined;
+    if (this.now() > pending.expiresAt) {
+      this.pendingProjectChoices.delete(msg.chatId);
+      return undefined;
+    }
+    if (pending.senderId !== msg.senderId || !/^\d+$/.test(msg.text.trim())) return undefined;
+    this.pendingProjectChoices.delete(msg.chatId);
+    this.store.markDispatched(msg.tenant, msg.chatId, msg.messageId);
+    const index = Number(msg.text.trim()) - 1;
+    const projectId = pending.projectIds[index];
+    if (!projectId) {
+      await this.reply("sys", `選項無效，請回覆 1-${pending.projectIds.length}；原要求尚未執行。`, msg.chatId);
+      return { action: "project:choice-invalid" };
+    }
+    return this.run(projectId, pending.request, msg);
   }
 
   private availableProjectIds(chatId: string): ReadonlySet<string> {
@@ -724,7 +800,12 @@ export class Coordinator {
       this.runRequests.set(jobId, { projectId, request, msg, options: { ...options, jobId, cwd }, resolve, reject });
     });
     const queueReason = queued?.reason === "capacity" ? "全域並行上限" : queued?.reason === "project-busy" ? "同專案主 lane 忙碌" : "目前可執行";
-    await this.reply(jobId, queued?.state === "queued" ? `已接收，專案 ${projectId}，排隊第 ${queued.position}（${queueReason}）。` : `已接收，專案 ${projectId}，準備執行。`, msg.chatId);
+    const mode = options.executionMode ?? "main";
+    const permission = proj.executionPolicy ?? "read-only";
+    const ack = queued?.state === "queued"
+      ? `已接收：${projectId} · Task ${jobId} · ${request.slice(0, 80)}\n模式：${mode} · 權限：${permission}\n排隊第 ${queued.position}（${queueReason}）。`
+      : `已接收：${projectId} · Task ${jobId} · ${request.slice(0, 80)}\n模式：${mode} · 權限：${permission}\n準備執行。`;
+    await this.reply(jobId, ack, msg.chatId);
     this.pumpRuns();
     return result;
   }
@@ -745,7 +826,7 @@ export class Coordinator {
           const detail = error instanceof Error ? error.message : "未知執行錯誤";
           const executionUnknown = /process|exit|disconnect|transport/i.test(detail);
           if (executionUnknown) this.store.updateJobMetadata(started.item.jobId, { executionStatus: "execution_unknown" });
-          this.store.updateJobStatus(started.item.jobId, executionUnknown ? "execution_unknown" : "failed", detail);
+          this.store.updateJobStatus(started.item.jobId, executionUnknown ? "needs_reconciliation" : "failed", detail);
           await this.reply(started.item.jobId, `執行失敗：${detail}`, req.msg.chatId);
           req.resolve({ action: "failed", jobId: started.item.jobId });
         })

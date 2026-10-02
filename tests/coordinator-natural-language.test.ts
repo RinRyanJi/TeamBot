@@ -47,6 +47,8 @@ test("focused self-chat accepts plain natural language and keeps the project", a
   const result = await coord.handle(msg("plain", "修正登入錯誤並跑測試"));
   assert.equal(result.action, "ran");
   assert.equal(store.getJob(result.jobId ?? "")?.projectId, "TeamBot");
+  assert.match(transport.sent.join("\n"), /模式：main · 權限：read-only/);
+  assert.match(transport.sent.join("\n"), /Task T001/);
   store.close();
 });
 
@@ -62,6 +64,22 @@ test("self-chat without focus asks for project choices instead of guessing", asy
   assert.equal(store.listJobs().length, 0);
   assert.match(transport.sent.join("\n"), /TeamBot/);
   assert.match(transport.sent.join("\n"), /Docs/);
+  store.close();
+});
+
+test("ambiguous project request accepts a numbered choice and runs once", async () => {
+  const store = new Store();
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", cwd: "D:/tb" });
+  projects.register({ projectId: "Docs", cwd: "D:/docs" });
+  const transport = new Transport();
+  const coord = new Coordinator({ store, transport, adapter: new Adapter() as unknown as CodexAdapter, projects, pairing, now: () => 10 });
+  const clarification = await coord.handle(msg("ambiguous", "跑一下昨天的測試"));
+  assert.equal(clarification.action, "project:clarification-required");
+  const selected = await coord.handle(msg("choice", "2"));
+  assert.equal(selected.action, "ran");
+  assert.equal(store.listJobs().length, 1);
+  assert.equal(store.getJob(selected.jobId ?? "")?.projectId, "Docs");
   store.close();
 });
 

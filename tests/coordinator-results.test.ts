@@ -91,6 +91,8 @@ test("coordinator folds Codex items into the task result and changed-file card",
   ]);
   assert.match(transport.sent.join("\n"), /login fixed/);
   assert.match(transport.sent.join("\n"), /Project：TeamBot · Task：T001 · 已完成/);
+  await coord.handle({ ...message("m-task-details"), text: "!tb task T001 details" });
+  assert.match(transport.sent.at(-1) ?? "", /產物清單：reports\/login\.md · report/);
   await coord.handle({ ...message("m-artifact"), text: "!tb artifact T001" });
   assert.match(transport.sent.at(-1) ?? "", /reports\/login\.md · report/);
   store.close();

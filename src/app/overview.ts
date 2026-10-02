@@ -11,7 +11,7 @@ export interface ProjectOverview {
   failed: number;
   jobs: Job[];
 }
-const ACTIVE = new Set(["queued", "starting", "running", "waiting", "waiting_input", "approval", "waiting_approval", "recovering", "merge-pending"]);
+const ACTIVE = new Set(["queued", "starting", "running", "waiting", "waiting_input", "approval", "waiting_approval", "recovering", "execution_unknown", "needs_reconciliation", "merge-pending"]);
 
 export function buildOverview(jobs: Job[], projects: ProjectRegistry, allowedProjectIds?: ReadonlySet<string>): ProjectOverview[] {
   const groups = new Map<string, Job[]>();
@@ -31,7 +31,13 @@ export function buildOverview(jobs: Job[], projects: ProjectRegistry, allowedPro
   });
 }
 
-export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs = 8, allowedProjectIds?: ReadonlySet<string>): string {
+export function formatOverview(
+  jobs: Job[],
+  projects: ProjectRegistry,
+  maxJobs = 8,
+  allowedProjectIds?: ReadonlySet<string>,
+  options: { summaryOnly?: boolean } = {},
+): string {
   const groups = buildOverview(jobs, projects, allowedProjectIds);
   const total = groups.reduce((n, g) => n + g.jobs.length, 0);
   const lines = ["[TB] 專案總覽"];
@@ -49,7 +55,10 @@ export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs =
       const step = job.currentStep ? ` · ${job.currentStep}` : "";
       const delivery = job.deliveryStatus === "delivery_degraded" ? " · delivery_degraded" : "";
       const execution = job.executionStatus === "execution_unknown" ? " · execution_unknown" : "";
-      lines.push(`  ${job.jobId} · ${job.status}${mode}${queue}${step}${delivery}${execution}${job.lastResult ? ` · ${job.lastResult.slice(0, 120)}` : ""}`);
+      const result = options.summaryOnly
+        ? (job.lastResult ? " · 已有結果（自己聊天查看詳情）" : "")
+        : (job.lastResult ? ` · ${job.lastResult.slice(0, 120)}` : "");
+      lines.push(`  ${job.jobId} · ${job.status}${mode}${queue}${step}${delivery}${execution}${result}`);
       remaining -= 1;
     }
   }
@@ -57,7 +66,23 @@ export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs =
   return lines.join("\n");
 }
 
-export function formatTask(job: Job, projectName = job.projectId): string {
+export function formatTask(
+  job: Job,
+  projectName = job.projectId,
+  options: { summaryOnly?: boolean; artifacts?: Array<{ path: string; kind: string }> } = {},
+): string {
+  if (options.summaryOnly) {
+    return [
+      `[TB ${job.jobId}] ${projectName}`,
+      `標題：${job.title || "(未命名)"}`,
+      `狀態：${job.status}`,
+      `目前步驟：${job.currentStep ?? "(尚無)"}`,
+      `檔案：${job.changedFiles?.length ?? 0} · 產物：${job.artifactCount ?? 0}`,
+      `最近事件：${job.lastEventAt ?? "-"}${job.deliveryStatus === "delivery_degraded" ? " · delivery_degraded" : ""}${job.executionStatus === "execution_unknown" ? " · execution_unknown" : ""}`,
+      "群組僅顯示摘要；完整結果與細節請由發起人在自己聊天查看。",
+    ].join("\n");
+  }
+  const artifacts = options.artifacts ?? [];
   return [
     `[TB ${job.jobId}] ${projectName}`,
     `標題：${job.title || "(未命名)"}`,
@@ -69,6 +94,7 @@ export function formatTask(job: Job, projectName = job.projectId): string {
     `Codex thread：${job.threadId ?? "尚未建立"}`,
     `最近事件：${job.lastEventAt ?? "-"} · 更新：${job.updatedAt ?? "-"}${job.deliveryStatus === "delivery_degraded" ? " · delivery_degraded" : ""}${job.executionStatus === "execution_unknown" ? " · execution_unknown" : ""}`,
     `結果：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`,
+    `產物清單：${artifacts.slice(0, 20).map((artifact) => `${artifact.path} · ${artifact.kind}`).join(", ") || "(尚無)"}${artifacts.length > 20 ? ` · 還有 ${artifacts.length - 20} 個` : ""}`,
   ].join("\n");
 }
 

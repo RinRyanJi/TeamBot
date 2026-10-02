@@ -19,6 +19,9 @@ test("legal transitions are accepted", () => {
     ["stopping", "completed"], // stop races a real completion
     ["running", "completed"],
     ["running", "interrupted"],
+    ["running", "execution_unknown"],
+    ["execution_unknown", "needs_reconciliation"],
+    ["needs_reconciliation", "running"],
     ["interrupted", "running"],
     ["unknown", "failed"],
   ];

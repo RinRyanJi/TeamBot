@@ -20,11 +20,13 @@ export type JobStatus =
   | "cancelled"
   | "interrupted"
   | "unknown"
+  | "execution_unknown"
+  | "needs_reconciliation"
   | "merge-pending";
 
 const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
   queued: ["starting", "cancelled"],
-  starting: ["running", "failed", "stopping"],
+  starting: ["running", "failed", "stopping", "execution_unknown", "needs_reconciliation"],
   running: [
     "completed",
     "failed",
@@ -33,6 +35,8 @@ const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
     "stopping",
     "interrupted",
     "unknown",
+    "execution_unknown",
+    "needs_reconciliation",
     "merge-pending",
   ],
   waiting_input: ["running", "stopping", "failed", "interrupted", "unknown"],
@@ -40,8 +44,10 @@ const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
   // Stop may race with a real completion/failure that was already in flight.
   stopping: ["cancelled", "completed", "failed"],
   // After reconciliation an interrupted/unknown job resolves to a definite state.
-  interrupted: ["running", "completed", "failed", "cancelled", "unknown"],
-  unknown: ["running", "completed", "failed", "cancelled", "interrupted"],
+  interrupted: ["running", "completed", "failed", "cancelled", "unknown", "execution_unknown", "needs_reconciliation"],
+  unknown: ["running", "completed", "failed", "cancelled", "interrupted", "execution_unknown", "needs_reconciliation"],
+  execution_unknown: ["needs_reconciliation", "running", "completed", "failed", "cancelled"],
+  needs_reconciliation: ["running", "completed", "failed", "cancelled", "execution_unknown"],
   "merge-pending": ["completed", "cancelled"],
   // Terminal.
   completed: [],

@@ -30,6 +30,24 @@ class ConcurrentAdapter extends EventEmitter {
   async interrupt(): Promise<void> {}
 }
 
+class AddIsolationAdapter extends EventEmitter {
+  private thread = 0;
+  private turn = 0;
+  async startThread(): Promise<{ threadId: string }> { return { threadId: `add-thread-${++this.thread}` }; }
+  async startTurn(params: { threadId: string }): Promise<{ turnId: string }> {
+    const turnId = `add-turn-${++this.turn}`;
+    setImmediate(() => {
+      this.emit("item/completed", { threadId: "other-thread", turnId: "other-turn", text: "wrong-thread-output" });
+      this.emit("turn/completed", { threadId: "other-thread", turnId: "other-turn" });
+      this.emit("item/completed", { threadId: params.threadId, turnId, text: `correct-${turnId}` });
+      this.emit("turn/completed", { threadId: params.threadId, turnId });
+    });
+    return { turnId };
+  }
+  async steer(): Promise<void> {}
+  async interrupt(): Promise<void> {}
+}
+
 class Transport implements TeamsTransport {
   sent: string[] = [];
   private readonly id: string;
@@ -72,6 +90,29 @@ test("coordinator runs different projects concurrently when the cap allows it", 
   assert.equal(adapter.maxActive, 2);
   assert.equal(store.getJob("T001")?.status, "completed");
   assert.equal(store.getJob("T002")?.status, "completed");
+  store.close();
+});
+
+test("appended turns ignore events from another Codex thread", async () => {
+  const store = new Store();
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "A", cwd: "D:/a" });
+  const adapter = new AddIsolationAdapter();
+  const transport = new Transport("self");
+  const coord = new Coordinator({
+    store,
+    transport,
+    adapter: adapter as unknown as CodexAdapter,
+    projects,
+    pairing: { ...pairing, projects: ["A"] },
+    now: () => 10,
+  });
+  const first = await coord.handle(message("add-m1", "!tb run A inspect"));
+  assert.equal(first.action, "ran");
+  const added = await coord.handle(message("add-m2", `!tb add ${first.jobId} follow up`));
+  assert.equal(added.action, "added");
+  assert.match(transport.sent.at(-1) ?? "", /correct-add-turn-2/);
+  assert.doesNotMatch(transport.sent.join("\n"), /wrong-thread-output/);
   store.close();
 });
 

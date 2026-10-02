@@ -26,7 +26,7 @@ const msg = (id: string, senderId: string, text: string, chatId = "group"): Inbo
 
 test("group overview is summary-only and viewer cannot dispatch work", async () => {
   const store = new Store();
-  store.createJob({ jobId: "T-G", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", status: "running", createdAt: 1 });
+  store.createJob({ jobId: "T-G", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", status: "running", resultSummary: "PRIVATE full Codex output", createdAt: 1 });
   store.createJob({ jobId: "T-P", chatId: "self", senderId: "owner", projectId: "TeamBot", cwd: "D:/tb", status: "running", createdAt: 2 });
   const projects = new ProjectRegistry();
   projects.register({ projectId: "TeamBot", name: "TeamBot", cwd: "D:/tb" });
@@ -41,12 +41,30 @@ test("group overview is summary-only and viewer cannot dispatch work", async () 
   assert.equal(overview.action, "overview");
   assert.ok(transport.sent.some((text) => text.includes("T-G")));
   assert.ok(!transport.sent.some((text) => text.includes("T-P")));
+  assert.ok(!transport.sent.some((text) => text.includes("PRIVATE full Codex output")));
   const cards = await coord.handle(msg("m-projects", "viewer", "!tb projects"));
   assert.equal(cards.action, "projects");
   assert.ok(!transport.sent.some((text) => text.includes("Private")));
   const denied = await coord.handle(msg("m2", "viewer", "!tb run TeamBot inspect"));
   assert.equal(denied.action, "denied:group-role");
   assert.equal(store.getJob("T002"), undefined);
+  store.close();
+});
+
+test("group task and diff views stay summary-only", async () => {
+  const store = new Store();
+  store.createJob({ jobId: "T001", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", status: "completed", threadId: "private-thread", resultSummary: "PRIVATE output", changedFiles: ["src/login.ts"], createdAt: 1 });
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", name: "TeamBot", cwd: "D:/tb" });
+  const pairing: Pairing = { id: "g", tenant: "t", account: "owner", chatId: "group", kind: "group", allowlist: ["operator", "viewer"], roles: { operator: "operator", viewer: "viewer" }, projects: ["TeamBot"], createdAt: 1 };
+  const transport = new Transport("group");
+  const coord = new Coordinator({ store, transport, adapter: {} as CodexAdapter, projects, pairing, now: () => 10 });
+  await coord.handle(msg("task-summary", "viewer", "!tb task T001 details"));
+  assert.match(transport.sent.at(-1) ?? "", /群組僅顯示摘要/);
+  assert.doesNotMatch(transport.sent.at(-1) ?? "", /PRIVATE output|private-thread/);
+  await coord.handle(msg("diff-summary", "viewer", "!tb diff T001"));
+  assert.match(transport.sent.at(-1) ?? "", /完整內容請由發起人/);
+  assert.doesNotMatch(transport.sent.at(-1) ?? "", /PRIVATE output/);
   store.close();
 });
 
