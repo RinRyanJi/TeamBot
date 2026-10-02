@@ -1,4 +1,6 @@
-# TeamBot PRD v3 — 以「怎麼用才方便」重寫
+# TeamBot PRD v3 — 以「怎麼用才方便」重寫（歷史版本）
+
+> **Canonical spec moved to [PRD v4](PRD-v4.md) (2026-10-03).** v3 保留作為既有實作與評審決策的歷史紀錄；新功能、UX、User Case 和多專案優先序以 v4 為準。
 
 日期:2026-09-24。狀態:**設計定案中,核心體驗尚未實作**(見 §0.5 實作現況對帳)。27 task / 測試 136 passed 證明的是「單元與端到端管線能跑」,**不等於 PRD 承諾的體驗已成立**。
 v2 在 git 歷史 `20c4404..7ea1bc6`。參考:`docs/architecture.md`、`docs/product-brainstorm.md`;體驗證據見附錄 A(讀 telecodex 原始碼)。

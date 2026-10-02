@@ -676,6 +676,56 @@
       "evidence": [
         "deferred.md"
       ]
+    },
+    {
+      "id": "task056",
+      "slug": "prd-v4-multi-project-ux",
+      "phase": "P0",
+      "env": "local",
+      "title": "PRD v4: project-first multi-project UX and user cases",
+      "spec": "Replace the single-resident-AgentHub product mental model with Project -> Task -> Session -> Turn. Specify project profiles, active conversation context, overview, task-first commands, multi-project execution rules, notification levels, approvals, recovery, and evidence-based user cases.",
+      "acceptance": "PRD v4 and User Cases v4 are linked from README; at least ten user cases cover onboarding, ambiguity, multi-project execution, approval, interruption, groups, recovery, handoff, and artifacts; v3 documents are marked historical and new priorities are traceable.",
+      "evidence": ["spec-review.md"]
+    },
+    {
+      "id": "task057",
+      "slug": "project-profile-context",
+      "phase": "P0",
+      "env": "local",
+      "title": "Project profiles and per-conversation active context",
+      "spec": "Implement the v4 Project Profile and conversation context model. A project must be selected explicitly when context is ambiguous; the phone never submits cwd. Add focus/projects behavior and context expiry.",
+      "acceptance": "Tests prove registered project selection, alias collision rejection, context expiry, ambiguous run clarification, and no arbitrary cwd from Teams.",
+      "evidence": ["project-context-test.txt"]
+    },
+    {
+      "id": "task058",
+      "slug": "multi-project-overview",
+      "phase": "P0",
+      "env": "local",
+      "title": "Cross-project overview and task-first status cards",
+      "spec": "Add overview/task/details reducers and presentation. Group active, waiting, queued, completed, and offline work by project; every card includes project name and human task ID.",
+      "acceptance": "Fixture tests render one-screen overview, task details, action-required states, and no fabricated percentage or ETA. Status can be read without starting a Codex turn.",
+      "evidence": ["overview-status-test.txt"]
+    },
+    {
+      "id": "task059",
+      "slug": "multi-project-lanes",
+      "phase": "P1",
+      "env": "local",
+      "title": "Multi-project execution lanes and worktree UX",
+      "spec": "Expose global concurrency, per-project main-lane locking, explicit worktree fork, queue reasons, and merge-pending state. Different projects may run concurrently within a configured cap; same-project parallel work requires isolation.",
+      "acceptance": "Tests prove different-project scheduling, same-project serialization, explicit fork confirmation, isolated worktree identity, queue visibility, and no shared-main-workspace concurrent writes.",
+      "evidence": ["lane-scheduler-test.txt"]
+    },
+    {
+      "id": "task060",
+      "slug": "group-project-context",
+      "phase": "P1",
+      "env": "live",
+      "title": "Group project context and role UX revalidation",
+      "spec": "Revalidate the group scenario against v4: explicit project context, member roles, source conversation binding, summary-only group output, and private routing for high-risk approvals.",
+      "acceptance": "User-run live evidence covers group project selection, unauthorized member denial, cross-conversation isolation, private approval routing, and phone-visible recovery behavior.",
+      "evidence": ["group-project-live.md"]
     }
   ]
 }

@@ -1,5 +1,7 @@
 # TeamBot 實作計畫 v3(從 PRD v3 推導)
 
+> **規格注意（2026-10-03）**：本計畫描述既有 v3 任務閘門與證據狀態；產品優先序已由 [PRD v4](PRD-v4.md) 和 [User Cases v4](user-cases-v4.md) 更新。多專案 overview、active project、task-first 控制與不猜測路由列為新一輪 P0/P1；不要依照本文件的舊「多會話 P2」排序新增功能。
+
 日期:2026-09-25。來源:[PRD.md](PRD.md)(v3)+ 五角色評審會議(`w600vkbah`)。
 本計畫**取代** [implementation-plan.md](implementation-plan.md)(v2 era)。關係鏈:
 **PRD.md(為什麼/要什麼)→ 本計畫(階段/閘門)→ [Tasklist.md](../Tasklist.md)(可勾選項目)→ `tasks/taskNNN/`(證據)。**

@@ -1,5 +1,7 @@
 # TeamBot 產品規劃 Brainstorm — 回報 / 狀態 / 決策
 
+> **產品方向更新（2026-10-03）**：本文件的三大互動場景仍有效，但產品中心已由「單一常駐 AgentHub」提升為 Project-first 控制台。請以 [PRD v4](PRD-v4.md) 與 [User Cases v4](user-cases-v4.md) 的 Project → Task → Session → Turn 模型，以及多專案 overview、工作區隔離和澄清流程為新規格。
+
 日期:2026-09-24。形式:四視角會議(產品UX、架構可靠度、安全信任、Codex 事件整合)彙整。
 背景:TeamBot 以**常駐 Codex session**(單一持久 thread,執行於 `D:\AgentHub`)為核心,經由 Teams(CDP 接自有 WebContentsView)接收 `!tb`/`@tb` 指令,回報到同一對話。此文件規劃三大互動場景並提出落地路線。
 

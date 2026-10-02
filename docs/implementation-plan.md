@@ -1,5 +1,7 @@
 # TeamBot 分階段實作計畫
 
+> 產品規格已更新至 [PRD v4](PRD-v4.md)；本文件的早期 Phase 0–3 描述保留作為歷史基線。多專案 Project-first、overview、active context 和 lane/worktree UX 以 v4 與 task056–060 為準。
+
 目前狀態：**實作中,並已端到端跑通**。任務拆解於 `tasks/`(`tasks/README.md`),逐 task 附真實證據、個別 commit/push。原始 Phase 0–3 為早期規劃;實際落地情形與新產品方向見下方「Phase R — 常駐助理」。
 
 ## Phase R — 常駐助理(現行產品方向)

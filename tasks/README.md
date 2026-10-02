@@ -1,6 +1,6 @@
 # TeamBot task list
 
-Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md). Each task is completed with real evidence stored under its `evidence/` folder, then committed/pushed individually.
+Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md), with product priorities now governed by [PRD v4](../docs/PRD-v4.md) and [User Cases v4](../docs/user-cases-v4.md). Each task is completed with real evidence stored under its `evidence/` folder, then committed/pushed individually.
 
 - **env=local**: fully verifiable on this machine (build/test/real codex-cli).
 - **env=live**: requires the user's real Teams tenant/phone; the agent provides the harness, the user runs it (real Teams sends are restricted per AGENTS.md).
@@ -62,5 +62,10 @@ Decomposition of [../docs/implementation-plan.md](../docs/implementation-plan.md
 | task053 | G4 | local | [P2: K history import](task053-p2-history-import/README.md) | pending |
 | task054 | G4 | local | [P2: N ACL roles + audit_log](task054-p2-acl-roles/README.md) | pending |
 | task055 | G4 | local | [P2: O config-driven settings](task055-p2-config-driven/README.md) | pending |
+| task056 | P0 | local | [PRD v4: project-first multi-project UX and user cases](task056-prd-v4-multi-project-ux/README.md) | DONE |
+| task057 | P0 | local | [Project profiles and per-conversation active context](task057-project-profile-context/README.md) | pending |
+| task058 | P0 | local | [Cross-project overview and task-first status cards](task058-multi-project-overview/README.md) | pending |
+| task059 | P1 | local | [Multi-project execution lanes and worktree UX](task059-multi-project-lanes/README.md) | pending |
+| task060 | P1 | live | [Group project context and role UX revalidation](task060-group-project-context/README.md) | pending |
 
 See [manifest.json](manifest.json) for the machine-readable source and [scaffold.mjs](scaffold.mjs) for the generator.

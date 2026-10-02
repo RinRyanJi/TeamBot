@@ -1,6 +1,7 @@
-# TeamBot Tasklist(PRD v3 / plan-v3)
+# TeamBot Tasklist(PRD v3 / plan-v3；產品規格已更新至 v4)
 
 來源:[docs/PRD.md](docs/PRD.md) · [docs/plan-v3.md](docs/plan-v3.md)。
+新版產品需求與 User Case 見 [docs/PRD-v4.md](docs/PRD-v4.md) 及 [docs/user-cases-v4.md](docs/user-cases-v4.md)；本清單既有 G0–G4 狀態仍是歷史實作證據，新增任務需對齊 v4。
 task001–027 見 [tasks/README.md](tasks/README.md)(多為管線完成;PRD §0.5 指出部分是引擎存在/假 ✅,由本清單的治理與接線任務補實)。
 
 **完成定義**:每項需**真實證據**(測試綠燈或 live evidence)存於 `tasks/taskNNN/evidence/`,單獨 commit + push。狀態:☐ 待辦 / ◐ 進行 / ☑ 完成(附證據)。
