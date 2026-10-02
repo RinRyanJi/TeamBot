@@ -1,0 +1,17 @@
+# PRD v4 / User Cases v4 local verification
+
+Date: 2026-10-03
+Repository: TeamBot
+
+Commands and results:
+
+- `npm test` — 186 tests passed, 0 failed, 0 skipped.
+- `npm run test:v4` — 49 tests passed, 0 failed, 0 skipped. This includes UC-01 through UC-12 fixtures.
+- `npm run typecheck` — exit 0.
+- `npm run build` — exit 0.
+- `node --experimental-strip-types --check scripts/e2e-v4-run.ts` — exit 0.
+- `npx electron launcher/electron/console-main.cjs --smoke` — exit 0; `hasRegistrationForm:true`, `hasProfileFields:true`, `trayCreated:true`, `drained:true`.
+- `npm run harness:teams:v4` — exit 0; printed the UC-01 through UC-12 live checklist and sent no Teams messages.
+- `git diff --check` — exit 0.
+
+Scope note: these are local fixture, storage, coordinator, Electron and app-server checks. Real Teams tenant, phone push and group-chat behavior remain the explicit user-run gate in task060; no live account messages, cookies or screenshots are included in Git.

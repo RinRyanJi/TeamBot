@@ -11,6 +11,8 @@ npm run harness:teams:v4
 node --experimental-strip-types --check scripts/e2e-v4-run.ts
 ```
 
+The current run is recorded in [local-verification-2026-10-03.txt](local-verification-2026-10-03.txt).
+
 Observed evidence:
 
 - 186 tests passed, including the 49-test v4 suite with all 12 User Cases v4 fixtures, coordinator result folding, task detail summaries, and `completed_with_followup` for failed commands.
