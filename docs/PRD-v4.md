@@ -139,6 +139,8 @@ active project 不是永久隱性狀態。切換後的有效期限與範圍必�
 | 省略專案交辦 | `!tb run 修正剛才的型別錯誤` | 只在 active project 唯一有效時執行 |
 | 看任務 | `!tb task TB-API-7K2` | 顯示一屏摘要；不展開完整事件流 |
 | 看細節 | `!tb task TB-API-7K2 details` | 展開計畫、最近命令、檔案變更、測試 |
+| 重新命名 | `!tb rename TB-API-7K2 登入測試修正` | 修改手機顯示的 task 標題，不改變 Project、thread 或執行內容 |
+| 查看變更 | `!tb diff TB-API-7K2` / `files` / `artifact` | 只回傳已儲存的 diff 摘要、檔案清單或產物摘要 |
 | 追加要求 | `!tb add TB-API-7K2 優先處理 Windows` | 送入同一 thread 的下一個 turn |
 | 中途轉向 | `!tb steer TB-API-7K2 改跑單元測試` | 使用 `turn/steer`，只接受明確 task |
 | 新建平行工作 | `!tb fork TB-API-7K2 做相容性修正` | 建立 worktree，回覆新 task 和隔離路徑 |

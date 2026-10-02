@@ -19,9 +19,15 @@ test("GitWorktreeRuntime creates and removes a real isolated worktree", async (t
     await execFileAsync("git", ["-C", root, "add", "README.md"]);
     await execFileAsync("git", ["-C", root, "commit", "-qm", "fixture"]);
     const runtime = new GitWorktreeRuntime();
-    const path = await runtime.create(root, "T-WT");
+    const created = await runtime.create(root, "T-WT");
+    assert.equal(typeof created, "object");
+    const info = created as unknown as { path: string; branchName: string };
+    const path = info.path;
     assert.match(path, /\.worktrees/);
+    assert.equal(info.branchName, "teambot/T-WT");
     const inside = await execFileAsync("git", ["-C", path, "rev-parse", "--show-toplevel"]);
+    const branch = await execFileAsync("git", ["-C", path, "branch", "--show-current"]);
+    assert.equal(branch.stdout.trim(), "teambot/T-WT");
     assert.ok(inside.stdout.trim().length > 0);
     await runtime.remove(root, path);
     const list = await execFileAsync("git", ["-C", root, "worktree", "list", "--porcelain"]);

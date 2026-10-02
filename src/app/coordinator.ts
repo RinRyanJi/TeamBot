@@ -34,6 +34,8 @@ export interface CoordinatorOptions {
   maxConcurrent?: number;
   worktreeRoot?: string;
   privateApprovalChatId?: string;
+  /** Self-chat may accept a plain natural-language request when its project context is unique. */
+  acceptNaturalLanguage?: boolean;
 }
 
 export interface HandleResult {
@@ -46,6 +48,7 @@ interface RunOptions {
   cwd?: string;
   executionMode?: "main" | "worktree";
   worktreePath?: string;
+  branchName?: string;
 }
 
 export class Coordinator {
@@ -63,6 +66,7 @@ export class Coordinator {
   private scheduler: MultiTaskScheduler;
   private approvals: ApprovalManager;
   private privateApprovalChatId?: string;
+  private acceptNaturalLanguage: boolean;
   private contexts = new ConversationContextStore();
   private seq = 0;
   private cancelled = new Set<string>();
@@ -84,6 +88,7 @@ export class Coordinator {
     this.scheduler = new MultiTaskScheduler(opts.worktreeRoot ?? "D:\\TeamBot\\.worktrees", opts.maxConcurrent ?? 1);
     this.approvals = new ApprovalManager(this.store);
     this.privateApprovalChatId = opts.privateApprovalChatId;
+    this.acceptNaturalLanguage = opts.acceptNaturalLanguage ?? true;
     const eventSource = this.adapter as unknown as { on?: (event: string, listener: (payload: unknown) => void) => void };
     eventSource.on?.("serverRequest", (payload) => { void this.handleServerRequest(payload); });
     this.inbox = new Inbox(this.store);
@@ -109,6 +114,19 @@ export class Coordinator {
 
     const parsed = parseCommand(msg.text);
     if (!parsed.ok) {
+      if (this.acceptNaturalLanguage && this.pairing.kind === "self" && !msg.text.trimStart().startsWith("[TB")) {
+        const resolution = resolveProject(this.projects, this.contexts, msg.chatId, undefined, this.availableProjectIds(msg.chatId));
+        if (resolution.kind === "resolved") {
+          this.store.markDispatched(msg.tenant, msg.chatId, msg.messageId);
+          return this.run(resolution.project.projectId, msg.text.trim(), msg);
+        }
+        if (resolution.kind === "ambiguous") {
+          const choices = resolution.candidates.filter((p) => this.projectAllowed(p.projectId, msg.chatId)).map((p, i) => `${i + 1}. ${p.name} (${p.projectId})`).join("\n");
+          await this.reply("sys", `請先選擇專案，再送出要求：\n${choices}`, msg.chatId);
+          this.store.markDispatched(msg.tenant, msg.chatId, msg.messageId);
+          return { action: "project:clarification-required" };
+        }
+      }
       // Recorded but not a command (e.g. ordinary chat, or a [TB] report line).
       return { action: `not-command:${parsed.reason}` };
     }
@@ -129,10 +147,10 @@ export class Coordinator {
 
     switch (cmd.kind) {
       case "help":
-        await this.reply("sys", "指令：overview/projects/focus/run/task/add/steer/fork/watch/mute/stop/cancel/approve/deny/handoff/help", msg.chatId);
+        await this.reply("sys", "指令：overview/projects/focus/run/task/details/rename/diff/files/artifact/add/steer/fork/watch/mute/stop/kill/cancel/approve/deny/handoff/help", msg.chatId);
         return { action: "help" };
       case "projects":
-        await this.reply("sys", formatProjects(this.projects), msg.chatId);
+        await this.reply("sys", formatProjects(this.projects, this.availableProjectIds(msg.chatId)), msg.chatId);
         return { action: "projects" };
       case "run":
         return this.run(cmd.projectId, cmd.request, msg);
@@ -174,6 +192,7 @@ export class Coordinator {
         const requestId = Number(resolved.approval.requestId);
         if (Number.isFinite(requestId)) this.adapter.respond(requestId, { accept: cmd.kind === "approve" });
         this.store.updateJobStatus(resolved.approval.jobId, cmd.kind === "approve" ? "running" : "waiting_approval");
+        this.store.updateJobMetadata(resolved.approval.jobId, { pendingDecision: null });
         await this.reply(resolved.approval.jobId, `${cmd.kind === "approve" ? "已批准" : "已拒絕"} ${cmd.code}。`, msg.chatId);
         return { action: cmd.kind, jobId: resolved.approval.jobId };
       }
@@ -194,12 +213,24 @@ export class Coordinator {
         this.adapter.respond(input.requestId, { text: cmd.text });
         this.pendingInputs.delete(cmd.questionId);
         this.store.updateJobStatus(input.jobId, "running");
+        this.store.updateJobMetadata(input.jobId, { pendingDecision: null });
         await this.reply(input.jobId, `已回答 ${cmd.questionId}，繼續執行。`, msg.chatId);
         return { action: "answered", jobId: input.jobId };
       }
       case "kill": {
+        if (cmd.jobId) {
+          const target = this.store.getJob(cmd.jobId);
+          if (!target) {
+            await this.reply("sys", `找不到工作 ${cmd.jobId}`, msg.chatId);
+            return { action: "kill:unknown" };
+          }
+          if (!this.canControlJob(target, msg)) {
+            await this.reply("sys", "只有工作發起人或群組 operator 可以硬停止這個工作。", msg.chatId);
+            return { action: "kill:denied", jobId: cmd.jobId };
+          }
+        }
         this.adapter.stop();
-        const affected = this.store.listJobs().filter((job) => ["starting", "running", "waiting_input", "waiting_approval", "stopping"].includes(job.status));
+        const affected = this.store.listJobs().filter((job) => ["starting", "running", "waiting_input", "waiting_approval", "stopping"].includes(job.status) && (!cmd.jobId || job.jobId === cmd.jobId));
         for (const job of affected) this.store.updateJobStatus(job.jobId, "unknown", "Codex process was killed; reconciliation required");
         await this.reply("sys", affected.length ? `已硬停止 Codex；${affected.map((job) => job.jobId).join(", ")} 需要重新核對。` : "目前沒有執行中的 Codex 工作。", msg.chatId);
         return { action: "killed" };
@@ -218,7 +249,7 @@ export class Coordinator {
     const role = this.pairing.kind === "self"
       ? "owner"
       : (this.pairing.roles?.[msg.senderId] ?? "operator");
-    const mutating = ["run", "add", "fork", "cancel", "stop", "steer", "handoff"].includes(command.kind);
+    const mutating = ["run", "add", "fork", "cancel", "stop", "steer", "handoff", "rename"].includes(command.kind);
     if (mutating && role === "viewer") {
       await this.reply("sys", "群組檢視者只能查看摘要；請由 operator/owner 執行此操作。", msg.chatId);
       return { action: "denied:group-role" };
@@ -226,7 +257,7 @@ export class Coordinator {
 
     switch (command.kind) {
       case "overview":
-        await this.reply("sys", formatOverview(this.store.listJobs(this.pairing.kind === "group" ? msg.chatId : undefined), this.projects), msg.chatId);
+        await this.reply("sys", formatOverview(this.store.listJobs(this.pairing.kind === "group" ? msg.chatId : undefined), this.projects, 8, this.availableProjectIds(msg.chatId)), msg.chatId);
         return { action: "overview" };
       case "status": {
         const job = this.store.getJob(command.jobId);
@@ -239,41 +270,34 @@ export class Coordinator {
       }
       case "focus": {
         const project = this.projects.resolve(command.projectId);
-        if (!project || !this.pairing.projects.includes(project.projectId)) {
+        if (!project || !this.projectAllowed(project.projectId, msg.chatId)) {
           await this.reply("sys", `找不到或未授權專案：${command.projectId}`, msg.chatId);
           return { action: "focus:denied" };
         }
         const focused = this.contexts.focus(msg.chatId, project.projectId, this.now());
+        this.projects.markUsed(project.projectId, focused.updatedAt);
         this.store.setConversationContext(msg.chatId, project.projectId, focused.updatedAt, focused.expiresAt);
         await this.reply("sys", `目前專案：${project.name} (${project.projectId})；只對此聊天有效，至 ${new Date(focused.expiresAt).toISOString()} 前有效。`, msg.chatId);
         return { action: "focus", jobId: undefined };
       }
       case "run": {
-        const resolution = resolveProject(this.projects, this.contexts, msg.chatId, command.projectId);
+        const resolution = resolveProject(this.projects, this.contexts, msg.chatId, command.projectId, this.availableProjectIds(msg.chatId));
         if (resolution.kind === "unknown") {
-          // With an already focused, authorized project, `run <request>` is
-          // allowed as a convenience. Without that focus an unknown explicit
-          // project remains a hard authorization failure.
-          const focused = resolveProject(this.projects, this.contexts, msg.chatId, undefined);
-          if (command.projectId && focused.kind === "resolved" && focused.source === "focused" && this.pairing.projects.includes(focused.project.projectId)) {
-            this.contexts.focus(msg.chatId, focused.project.projectId, this.now());
-            this.store.setConversationContext(msg.chatId, focused.project.projectId, this.now());
-            return this.run(focused.project.projectId, `${command.projectId} ${command.request}`.trim(), msg);
-          }
           await this.reply("sys", `拒絕：專案未登記或未授權：${resolution.projectId}`, msg.chatId);
           return { action: command.projectId ? "denied:project-not-authorized" : "run:no-project" };
         }
         if (resolution.kind === "ambiguous") {
-          const names = resolution.candidates.filter((p) => this.pairing.projects.includes(p.projectId)).map((p) => `${p.name} (${p.projectId})`);
+          const names = resolution.candidates.filter((p) => this.projectAllowed(p.projectId, msg.chatId)).map((p) => `${p.name} (${p.projectId})`);
           await this.reply("sys", `請先指定專案：${names.join(", ") || "(沒有可用專案)"}\n例如：!tb focus <project>`, msg.chatId);
           return { action: "run:ambiguous" };
         }
-        if (!this.pairing.projects.includes(resolution.project.projectId)) {
+        if (!this.projectAllowed(resolution.project.projectId, msg.chatId)) {
           await this.reply("sys", `未授權專案：${resolution.project.projectId}`, msg.chatId);
           return { action: "run:denied" };
         }
-        this.contexts.focus(msg.chatId, resolution.project.projectId, this.now());
-        this.store.setConversationContext(msg.chatId, resolution.project.projectId, this.now());
+        const focused = this.contexts.focus(msg.chatId, resolution.project.projectId, this.now());
+        this.projects.markUsed(resolution.project.projectId, focused.updatedAt);
+        this.store.setConversationContext(msg.chatId, resolution.project.projectId, focused.updatedAt, focused.expiresAt);
         return this.run(resolution.project.projectId, command.request, msg);
       }
       case "task": {
@@ -289,6 +313,32 @@ export class Coordinator {
         const details = command.details ? `\n事件：${this.store.listEvents(job.jobId).slice(-8).map((e) => `${e.seq}:${e.kind}`).join(", ") || "(無)"}` : "";
         await this.reply(job.jobId, formatTask(job, this.projects.get(job.projectId)?.name) + details, msg.chatId);
         return { action: "task", jobId: job.jobId };
+      }
+      case "rename": {
+        const job = this.store.getJob(command.jobId);
+        if (!job || !this.canControlJob(job, msg)) {
+          await this.reply("sys", "只有工作發起人或群組 operator 可以重新命名這個工作。", msg.chatId);
+          return { action: "rename:denied" };
+        }
+        this.store.updateJobMetadata(job.jobId, { title: command.title });
+        await this.reply(job.jobId, `已重新命名：${command.title}`, msg.chatId);
+        return { action: "renamed", jobId: job.jobId };
+      }
+      case "diff":
+      case "files":
+      case "artifact": {
+        const job = this.store.getJob(command.jobId);
+        if (!job || (job.chatId !== msg.chatId && !this.admins.includes(msg.senderId))) {
+          await this.reply("sys", `找不到工作 ${command.jobId}`, msg.chatId);
+          return { action: `${command.kind}:unknown` };
+        }
+        const body = command.kind === "files"
+          ? `檔案（${job.changedFiles?.length ?? 0}）：${job.changedFiles?.join(", ") || "(尚無)"}`
+          : command.kind === "artifact"
+            ? `產物（${job.artifactCount ?? 0}）：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`
+            : `Diff 摘要：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`;
+        await this.reply(job.jobId, body, msg.chatId);
+        return { action: command.kind, jobId: job.jobId };
       }
       case "add": {
         if (command.jobId) {
@@ -326,7 +376,7 @@ export class Coordinator {
           await this.reply(base.jobId, `已追加並完成；結果：${addedResult || "(無輸出)"}`, msg.chatId);
           return { action: "added", jobId: base.jobId };
         }
-        const resolution = resolveProject(this.projects, this.contexts, msg.chatId, undefined);
+        const resolution = resolveProject(this.projects, this.contexts, msg.chatId, undefined, this.availableProjectIds(msg.chatId));
         if (resolution.kind !== "resolved") {
           await this.reply("sys", "請先用 !tb focus <project>，再把工作加入該專案。", msg.chatId);
           return { action: "add:ambiguous" };
@@ -361,8 +411,14 @@ export class Coordinator {
         this.pendingForks.delete(forkKey);
         const newJobId = this.allocateJobId();
         let worktreePath: string;
+        let branchName: string | undefined;
         try {
-          worktreePath = await this.worktrees.create(base.cwd, newJobId);
+          const created = await this.worktrees.create(base.cwd, newJobId);
+          if (typeof created === "string") worktreePath = created;
+          else {
+            worktreePath = created.path;
+            branchName = created.branchName;
+          }
         } catch (err) {
           await this.reply("sys", `建立 worktree 失敗：${err instanceof Error ? err.message : "未知錯誤"}`, msg.chatId);
           return { action: "fork:worktree-failed" };
@@ -373,6 +429,7 @@ export class Coordinator {
           cwd: worktreePath,
           executionMode: "worktree",
           worktreePath,
+          branchName,
         });
       }
       case "watch":
@@ -488,6 +545,16 @@ export class Coordinator {
     return role === "owner" || role === "operator";
   }
 
+  private projectAllowed(projectId: string, chatId: string): boolean {
+    if (!this.pairing.projects.includes(projectId)) return false;
+    const project = this.projects.get(projectId);
+    return !project?.conversationBindings?.length || project.conversationBindings.includes(chatId);
+  }
+
+  private availableProjectIds(chatId: string): ReadonlySet<string> {
+    return new Set(this.pairing.projects.filter((projectId) => this.projectAllowed(projectId, chatId)));
+  }
+
   private allocateJobId(): string {
     let candidate = this.ids.next();
     while (this.store.getJob(candidate)) candidate = this.ids.next();
@@ -513,6 +580,7 @@ export class Coordinator {
       const code = `Q${String(++this.inputSeq).padStart(3, "0")}`;
       this.pendingInputs.set(code, { requestId: request.id, jobId: job.jobId, chatId: target, expiresAt: this.now() + 120_000 });
       this.store.updateJobStatus(job.jobId, "waiting_input");
+      this.store.updateJobMetadata(job.jobId, { pendingDecision: code });
       await this.reply(job.jobId, `工作 ${job.jobId} 需要你的回答 ${code}：${scope}`, target);
       return;
     }
@@ -527,6 +595,7 @@ export class Coordinator {
       now: this.now(),
     });
     this.store.updateJobStatus(job.jobId, "waiting_approval");
+    this.store.updateJobMetadata(job.jobId, { pendingDecision: code });
     const body = dangerous && target !== job.chatId
       ? `工作 ${job.jobId} 等待發起人於私人聊天處理批准 ${code}。`
       : `工作 ${job.jobId} 需要批准 ${code}：${scope}`;
@@ -546,6 +615,7 @@ export class Coordinator {
     }
     const jobId = options.jobId ?? this.allocateJobId();
     const cwd = options.cwd ?? proj.cwd;
+    this.projects.markUsed(projectId, this.now());
     this.store.createJob({
       jobId,
       chatId: msg.chatId,
@@ -554,6 +624,7 @@ export class Coordinator {
       cwd,
       title: request.slice(0, 120),
       executionMode: options.executionMode ?? "main",
+      branchName: options.branchName ?? null,
       worktreePath: options.worktreePath ?? null,
       notificationPolicy: proj.notificationPolicy,
       status: "queued",
@@ -562,11 +633,15 @@ export class Coordinator {
     const laneKey = options.executionMode === "worktree" ? `${projectId}:${jobId}` : projectId;
     this.scheduler.submit({ jobId, chatId: msg.chatId, projectId, laneKey, worktreePath: cwd });
     const queued = this.scheduler.queueSnapshot().find((item) => item.jobId === jobId);
-    this.store.updateJobMetadata(jobId, { queuePosition: queued?.state === "queued" ? queued.position : null });
+    this.store.updateJobMetadata(jobId, {
+      queuePosition: queued?.state === "queued" ? queued.position : null,
+      queueReason: queued?.state === "queued" ? queued.reason : null,
+    });
     const result = new Promise<HandleResult>((resolve, reject) => {
       this.runRequests.set(jobId, { projectId, request, msg, options: { ...options, jobId, cwd }, resolve, reject });
     });
-    await this.reply(jobId, queued?.state === "queued" ? `已接收，專案 ${projectId}，排隊第 ${queued.position}（同專案主 lane 或資源上限）。` : `已接收，專案 ${projectId}，準備執行。`, msg.chatId);
+    const queueReason = queued?.reason === "capacity" ? "全域並行上限" : queued?.reason === "project-busy" ? "同專案主 lane 忙碌" : "目前可執行";
+    await this.reply(jobId, queued?.state === "queued" ? `已接收，專案 ${projectId}，排隊第 ${queued.position}（${queueReason}）。` : `已接收，專案 ${projectId}，準備執行。`, msg.chatId);
     this.pumpRuns();
     return result;
   }
@@ -593,7 +668,7 @@ export class Coordinator {
           this.runRequests.delete(started.item.jobId);
           this.scheduler.finish(started.item.jobId);
           for (const item of this.scheduler.queueSnapshot()) {
-            if (item.state === "queued") this.store.updateJobMetadata(item.jobId, { queuePosition: item.position });
+            if (item.state === "queued") this.store.updateJobMetadata(item.jobId, { queuePosition: item.position, queueReason: item.reason });
           }
           this.pumpRuns();
         });
@@ -611,11 +686,13 @@ export class Coordinator {
     if (!cwd) throw new Error(`project disappeared: ${projectId}`);
     // Drive the Codex turn to completion.
     this.store.updateJobStatus(jobId, "starting");
+    this.store.updateJobMetadata(jobId, { currentStep: "starting thread" });
     const thread = (await this.adapter.startThread({ cwd })) as {
       threadId: string;
     };
     this.store.setJobThread(jobId, thread.threadId);
     this.store.updateJobStatus(jobId, "running");
+    this.store.updateJobMetadata(jobId, { currentStep: "running turn" });
     this.store.appendEvent(jobId, 1, "turn/started", null, this.now());
 
     let lastItemText = "";
@@ -651,6 +728,7 @@ export class Coordinator {
     const worktree = job?.executionMode === "worktree";
     const finalStatus = wasCancelled ? "cancelled" : worktree ? "merge-pending" : "completed";
     this.store.updateJobStatus(jobId, finalStatus, lastItemText);
+    this.store.updateJobMetadata(jobId, { resultSummary: lastItemText || null, pendingDecision: null });
     await this.reply(jobId, `${wasCancelled ? "已取消" : worktree ? "已完成，待合併" : "已完成"}；結果：${lastItemText || "(無輸出)"}`, msg.chatId);
     return { action: "ran", jobId };
   }
@@ -667,7 +745,10 @@ export class Coordinator {
     );
     for (const row of this.outbox.pending(chatId)) {
       try {
-        await this.transport.sendMessage(row.body);
+        const routed = this.transport as TeamsTransport & { sendMessageTo?: (targetChatId: string, text: string) => Promise<string> };
+        if (chatId !== this.transport.chatId() && !routed.sendMessageTo) throw new Error(`transport cannot route chat ${chatId}`);
+        if (chatId !== this.transport.chatId()) await routed.sendMessageTo!(chatId, row.body);
+        else await this.transport.sendMessage(row.body);
         this.outbox.markSent(row.id, this.now());
       } catch {
         // Send outcome uncertain: retain for reconciliation, don't blindly resend.

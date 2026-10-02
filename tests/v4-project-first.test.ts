@@ -21,6 +21,8 @@ test("v4 parser supports project-first controls and natural language", () => {
   assert.deepEqual(parseV4Command("!tb inspect the failing login"), { ok: true, command: { kind: "run", request: "inspect the failing login" } });
   assert.deepEqual(parseV4Command("!tb task T004"), { ok: true, command: { kind: "task", jobId: "T004", details: false } });
   assert.deepEqual(parseV4Command("!tb task TB-API-7K2 details"), { ok: true, command: { kind: "task", jobId: "TB-API-7K2", details: true } });
+  assert.deepEqual(parseV4Command("!tb rename T004 login fix"), { ok: true, command: { kind: "rename", jobId: "T004", title: "login fix" } });
+  assert.deepEqual(parseV4Command("!tb files T004"), { ok: true, command: { kind: "files", jobId: "T004" } });
   assert.deepEqual(parseV4Command("!tb fork T004 add tests"), { ok: true, command: { kind: "fork", jobId: "T004", request: "add tests", confirmed: false } });
   assert.deepEqual(parseV4Command("!tb fork T004 confirm add tests"), { ok: true, command: { kind: "fork", jobId: "T004", request: "add tests", confirmed: true } });
   assert.deepEqual(parseV4Command("!tb stop T004"), { ok: true, command: { kind: "stop", jobId: "T004" } });
@@ -70,4 +72,12 @@ test("projects card exposes a safe path tail and policy posture", () => {
   assert.match(text, /default/);
   assert.match(text, /aliases: frontend/);
   assert.doesNotMatch(text, /D:\/work\/alpha\/\.env/);
+});
+
+test("project profiles normalize conversation bindings and preserve last-used metadata", () => {
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "Bound", cwd: "D:/bound", conversationBindings: ["group-a", "group-a"] });
+  projects.markUsed("Bound", 42);
+  assert.deepEqual(projects.get("Bound")?.conversationBindings, ["group-a"]);
+  assert.equal(projects.get("Bound")?.lastUsedAt, 42);
 });

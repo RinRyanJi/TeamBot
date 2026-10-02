@@ -3,7 +3,7 @@
 // they are routed to the initiator's self-chat/DM. Low-risk approvals stay in place.
 import type { Pairing } from "../storage/store.ts";
 
-const DANGEROUS = /\b(write|delete|remove|rm|network|exfiltrat|outside|escalat|sudo)\b/i;
+const DANGEROUS = /\b(write|delete|remove|rm|network|exfiltrat|outside|escalat|sudo|force|git\s+push|reset\s+--hard|rebase)\b/i;
 
 export function isDangerousScope(scope: string | null | undefined): boolean {
   if (!scope) return false;

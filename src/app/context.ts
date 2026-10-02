@@ -51,17 +51,20 @@ export function resolveProject(
   contexts: ConversationContextStore,
   chatId: string,
   explicitProject: string | undefined,
+  allowedProjectIds?: ReadonlySet<string>,
 ): ProjectResolution {
   if (explicitProject) {
     const project = registry.resolve(explicitProject);
-    return project ? { kind: "resolved", project, source: "explicit" } : { kind: "unknown", projectId: explicitProject };
+    return project && (!allowedProjectIds || allowedProjectIds.has(project.projectId))
+      ? { kind: "resolved", project, source: "explicit" }
+      : { kind: "unknown", projectId: explicitProject };
   }
   const focused = contexts.get(chatId).activeProjectId;
   if (focused) {
     const project = registry.get(focused);
-    if (project) return { kind: "resolved", project, source: "focused" };
+    if (project && (!allowedProjectIds || allowedProjectIds.has(project.projectId))) return { kind: "resolved", project, source: "focused" };
   }
-  const projects = registry.all();
+  const projects = registry.all().filter((project) => !allowedProjectIds || allowedProjectIds.has(project.projectId));
   if (projects.length === 1) return { kind: "resolved", project: projects[0]!, source: "only-project" };
   return { kind: "ambiguous", candidates: projects };
 }

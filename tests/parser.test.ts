@@ -141,6 +141,7 @@ test("parseWithImplicitRun: !tb <free text> becomes a run in the default project
 
 test("security commands: kill / lock / unlock [minutes]", () => {
   assert.deepEqual(parseCommand("!tb kill"), { ok: true, command: { kind: "kill" } });
+  assert.deepEqual(parseCommand("!tb kill T001"), { ok: true, command: { kind: "kill", jobId: "T001" } });
   assert.deepEqual(parseCommand("@tb lock"), { ok: true, command: { kind: "lock" } });
   assert.deepEqual(parseCommand("!tb unlock"), {
     ok: true,

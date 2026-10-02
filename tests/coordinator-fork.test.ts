@@ -38,7 +38,7 @@ test("fork requires confirmation and runs in a real worktree path supplied by th
   const projects = new ProjectRegistry();
   projects.register({ projectId: "TeamBot", cwd: "D:/tb", lanePolicy: "worktree-fork" });
   const pairing: Pairing = { id: "p", tenant: "t", account: "me", chatId: "self", kind: "self", allowlist: ["me"], projects: ["TeamBot"], createdAt: 1 };
-  const runtime: WorktreeRuntime = { create: async (_cwd, taskId) => `D:/tb/.worktrees/${taskId}`, remove: async () => {} };
+  const runtime: WorktreeRuntime = { create: async (_cwd, taskId) => ({ path: `D:/tb/.worktrees/${taskId}`, branchName: `teambot/${taskId}` }), remove: async () => {} };
   const coord = new Coordinator({ store, transport: new Transport(), adapter: new Adapter() as unknown as CodexAdapter, projects, pairing, worktrees: runtime, now: () => 10 });
   const preview = await coord.handle(input("m1", "!tb fork T001 add compatibility tests"));
   assert.equal(preview.action, "fork:confirmation-required");
@@ -49,6 +49,7 @@ test("fork requires confirmation and runs in a real worktree path supplied by th
   assert.ok(fork);
   assert.equal(fork.executionMode, "worktree");
   assert.equal(fork.status, "merge-pending");
+  assert.equal(fork.branchName, "teambot/T002");
   assert.match(fork.worktreePath ?? "", /T002/);
   store.close();
 });

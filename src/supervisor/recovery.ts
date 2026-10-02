@@ -56,7 +56,9 @@ export async function reconcileOutbox(
   let uncertain = 0;
   for (const row of store.listPendingOutbox(transport.chatId())) {
     try {
-      await transport.sendMessage(row.body);
+      if (row.chatId !== transport.chatId() && !transport.sendMessageTo) throw new Error(`transport cannot route chat ${row.chatId}`);
+      if (row.chatId !== transport.chatId()) await transport.sendMessageTo!(row.chatId, row.body);
+      else await transport.sendMessage(row.body);
       store.setOutboxStatus(row.id, "sent", now());
       sent += 1;
     } catch {

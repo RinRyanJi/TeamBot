@@ -13,6 +13,8 @@ export interface ProjectDef {
   executionPolicy?: "read-only" | "workspace-write" | "danger-full-access";
   lanePolicy?: "single-active" | "worktree-fork";
   notificationPolicy?: "quiet" | "important" | "all-decisions";
+  conversationBindings?: string[];
+  lastUsedAt?: number;
 }
 
 export class ProjectRegistry {
@@ -29,6 +31,7 @@ export class ProjectRegistry {
       aliases: [...new Set((def.aliases ?? []).map((a) => a.trim()).filter(Boolean))],
       lanePolicy: def.lanePolicy ?? "single-active",
       notificationPolicy: def.notificationPolicy ?? "important",
+      conversationBindings: [...new Set((def.conversationBindings ?? []).map((id) => id.trim()).filter(Boolean))],
     };
 
     // A project name/alias is a user-facing routing key. Replacing an existing
@@ -70,5 +73,10 @@ export class ProjectRegistry {
 
   all(): ProjectDef[] {
     return [...this.m.values()];
+  }
+
+  markUsed(projectId: string, at: number): void {
+    const project = this.m.get(projectId);
+    if (project) project.lastUsedAt = at;
   }
 }

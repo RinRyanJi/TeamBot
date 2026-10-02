@@ -61,12 +61,26 @@ test("job create/read/update + thread binding", () => {
     senderId: "u1",
     projectId: "TeamBot",
     cwd: "D:/proj",
+    title: "Run tests",
+    executionMode: "worktree",
+    branchName: "teambot/T001",
+    worktreePath: "D:/proj/.worktrees/T001",
+    queuePosition: 2,
+    queueReason: "capacity",
+    currentStep: "tests",
+    pendingDecision: null,
+    changedFiles: ["src/app.ts"],
+    artifactCount: 1,
+    resultSummary: "pending",
     status: "queued",
     createdAt: now,
   });
   let j = s.getJob("T001");
   assert.equal(j?.status, "queued");
   assert.equal(j?.threadId, null);
+  assert.equal(j?.branchName, "teambot/T001");
+  assert.deepEqual(j?.changedFiles, ["src/app.ts"]);
+  assert.equal(j?.queueReason, "capacity");
   s.setJobThread("T001", "thread-abc", "turn-1");
   s.updateJobStatus("T001", "running");
   j = s.getJob("T001");

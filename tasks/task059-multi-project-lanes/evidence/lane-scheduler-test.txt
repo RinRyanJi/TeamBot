@@ -14,3 +14,4 @@ Runtime evidence:
 - `GitWorktreeRuntime` created and removed a real Git worktree in an isolated temporary repository.
 - Coordinator fork requires confirmation, records `merge-pending`, and uses a separate execution lane.
 - Coordinator maxConcurrent=2 test observed two different projects executing at the same time.
+- Real worktree runtime creates a named `teambot/<taskId>` branch for desktop handoff and merge review.

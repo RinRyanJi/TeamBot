@@ -6,6 +6,8 @@ export type V4Command =
   | { kind: "run"; projectId?: string; request: string }
   | { kind: "status"; jobId: string }
   | { kind: "task"; jobId: string; details: boolean }
+  | { kind: "rename"; jobId: string; title: string }
+  | { kind: "diff" | "files" | "artifact"; jobId: string }
   | { kind: "add"; jobId?: string; request: string }
   | { kind: "fork"; jobId: string; request: string; confirmed: boolean }
   | { kind: "watch"; jobId: string; mode: "watch" | "mute" }
@@ -72,6 +74,21 @@ export function parseV4Command(raw: string, knownProjects: readonly string[] = [
       if (!jobId) return { ok: false, reason: "missing-args" };
       if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
       return { ok: true, command: { kind: "task", jobId, details: rest[1]?.toLowerCase() === "details" } };
+    }
+    case "rename": {
+      const jobId = rest[0];
+      const title = rest.slice(1).join(" ").trim();
+      if (!jobId || !title) return { ok: false, reason: "missing-args" };
+      if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: { kind: "rename", jobId, title } };
+    }
+    case "diff":
+    case "files":
+    case "artifact": {
+      const jobId = rest[0];
+      if (!jobId) return { ok: false, reason: "missing-args" };
+      if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: { kind: sub, jobId } };
     }
     case "add": {
       const maybeJob = rest[0];

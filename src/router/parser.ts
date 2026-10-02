@@ -32,7 +32,7 @@ export type Command =
   | { kind: "deny"; code: string }
   | { kind: "answer"; questionId: string; text: string }
   | { kind: "result"; jobId: string }
-  | { kind: "kill" }
+  | { kind: "kill"; jobId?: string }
   | { kind: "lock" }
   | { kind: "unlock"; minutes: number };
 
@@ -84,7 +84,9 @@ export function parseCommand(raw: string): ParseResult {
     case "projects":
       return { ok: true, command: { kind: "projects" } };
     case "kill":
-      return { ok: true, command: { kind: "kill" } };
+      if (!rest[0]) return { ok: true, command: { kind: "kill" } };
+      if (!isJobId(rest[0])) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: { kind: "kill", jobId: rest[0] } };
     case "lock":
       return { ok: true, command: { kind: "lock" } };
     case "unlock": {

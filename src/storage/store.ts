@@ -28,12 +28,19 @@ export interface Job {
   activeTurnId: string | null;
   title?: string;
   executionMode?: "main" | "worktree";
+  branchName?: string | null;
   worktreePath?: string | null;
   queuePosition?: number | null;
+  queueReason?: "capacity" | "project-busy" | "ready" | null;
   currentStep?: string | null;
+  pendingDecision?: string | null;
+  changedFiles?: string[];
+  artifactCount?: number;
+  resultSummary?: string | null;
   notificationPolicy?: "quiet" | "important" | "all-decisions";
   status: string;
   createdAt: number;
+  updatedAt?: number;
   lastEventAt: number | null;
   lastResult: string | null;
 }
@@ -133,10 +140,17 @@ export class Store {
     const jobDefaults: Array<[string, string]> = [
       ["title", "TEXT NOT NULL DEFAULT ''"],
       ["executionMode", "TEXT NOT NULL DEFAULT 'main'"],
+      ["branchName", "TEXT"],
       ["worktreePath", "TEXT"],
       ["queuePosition", "INTEGER"],
+      ["queueReason", "TEXT"],
       ["currentStep", "TEXT"],
+      ["pendingDecision", "TEXT"],
+      ["changedFiles", "TEXT NOT NULL DEFAULT '[]'"],
+      ["artifactCount", "INTEGER NOT NULL DEFAULT 0"],
+      ["resultSummary", "TEXT"],
       ["notificationPolicy", "TEXT NOT NULL DEFAULT 'important'"],
+      ["updatedAt", "INTEGER NOT NULL DEFAULT 0"],
     ];
     for (const [name, sql] of jobDefaults) if (!jobColumns.some((c) => c.name === name)) this.db.exec(`ALTER TABLE jobs ADD COLUMN ${name} ${sql}`);
     this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
@@ -262,8 +276,8 @@ export class Store {
   ): void {
     this.db
       .prepare(
-        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,worktreePath,queuePosition,currentStep,notificationPolicy,status,createdAt,lastEventAt,lastResult)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
+        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,branchName,worktreePath,queuePosition,queueReason,currentStep,pendingDecision,changedFiles,artifactCount,resultSummary,notificationPolicy,status,createdAt,updatedAt,lastEventAt,lastResult)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
       )
       .run(
         j.jobId,
@@ -275,12 +289,19 @@ export class Store {
         j.activeTurnId ?? null,
         j.title ?? "",
         j.executionMode ?? "main",
+        j.branchName ?? null,
         j.worktreePath ?? null,
         j.queuePosition ?? null,
+        j.queueReason ?? null,
         j.currentStep ?? null,
+        j.pendingDecision ?? null,
+        JSON.stringify(j.changedFiles ?? []),
+        j.artifactCount ?? 0,
+        j.resultSummary ?? null,
         j.notificationPolicy ?? "important",
         j.status,
         j.createdAt,
+        j.updatedAt ?? j.createdAt,
       );
   }
 
@@ -299,12 +320,19 @@ export class Store {
       activeTurnId: (row.activeTurnId as string | null) ?? null,
       title: (row.title as string | undefined) ?? "",
       executionMode: ((row.executionMode as string | undefined) ?? "main") as Job["executionMode"],
+      branchName: (row.branchName as string | null) ?? null,
       worktreePath: (row.worktreePath as string | null) ?? null,
       queuePosition: (row.queuePosition as number | null) ?? null,
+      queueReason: (row.queueReason as Job["queueReason"]) ?? null,
       currentStep: (row.currentStep as string | null) ?? null,
+      pendingDecision: (row.pendingDecision as string | null) ?? null,
+      changedFiles: JSON.parse((row.changedFiles as string | undefined) ?? "[]") as string[],
+      artifactCount: Number(row.artifactCount ?? 0),
+      resultSummary: (row.resultSummary as string | null) ?? null,
       notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
       status: row.status as string,
       createdAt: row.createdAt as number,
+      updatedAt: (row.updatedAt as number | undefined) ?? (row.createdAt as number),
       lastEventAt: (row.lastEventAt as number | null) ?? null,
       lastResult: (row.lastResult as string | null) ?? null,
     };
@@ -331,12 +359,19 @@ export class Store {
       activeTurnId: (row.activeTurnId as string | null) ?? null,
       title: (row.title as string | undefined) ?? "",
       executionMode: ((row.executionMode as string | undefined) ?? "main") as Job["executionMode"],
+      branchName: (row.branchName as string | null) ?? null,
       worktreePath: (row.worktreePath as string | null) ?? null,
       queuePosition: (row.queuePosition as number | null) ?? null,
+      queueReason: (row.queueReason as Job["queueReason"]) ?? null,
       currentStep: (row.currentStep as string | null) ?? null,
+      pendingDecision: (row.pendingDecision as string | null) ?? null,
+      changedFiles: JSON.parse((row.changedFiles as string | undefined) ?? "[]") as string[],
+      artifactCount: Number(row.artifactCount ?? 0),
+      resultSummary: (row.resultSummary as string | null) ?? null,
       notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
       status: row.status as string,
       createdAt: row.createdAt as number,
+      updatedAt: (row.updatedAt as number | undefined) ?? (row.createdAt as number),
       lastEventAt: (row.lastEventAt as number | null) ?? null,
       lastResult: (row.lastResult as string | null) ?? null,
     }));
@@ -345,31 +380,31 @@ export class Store {
   updateJobStatus(jobId: string, status: string, lastResult?: string): void {
     this.db
       .prepare(
-        "UPDATE jobs SET status=?, lastResult=COALESCE(?, lastResult) WHERE jobId=?",
+        "UPDATE jobs SET status=?, lastResult=COALESCE(?, lastResult), updatedAt=? WHERE jobId=?",
       )
-      .run(status, lastResult ?? null, jobId);
+      .run(status, lastResult ?? null, Date.now(), jobId);
   }
 
   setJobThread(jobId: string, threadId: string, activeTurnId?: string): void {
     this.db
-      .prepare("UPDATE jobs SET threadId=?, activeTurnId=? WHERE jobId=?")
-      .run(threadId, activeTurnId ?? null, jobId);
+      .prepare("UPDATE jobs SET threadId=?, activeTurnId=?, updatedAt=? WHERE jobId=?")
+      .run(threadId, activeTurnId ?? null, Date.now(), jobId);
   }
 
   updateJobMetadata(
     jobId: string,
-    metadata: Partial<Pick<Job, "title" | "executionMode" | "worktreePath" | "queuePosition" | "currentStep" | "notificationPolicy">>,
+    metadata: Partial<Pick<Job, "title" | "executionMode" | "branchName" | "worktreePath" | "queuePosition" | "queueReason" | "currentStep" | "pendingDecision" | "changedFiles" | "artifactCount" | "resultSummary" | "notificationPolicy">>,
   ): void {
     const fields: string[] = [];
     const values: Array<string | number | null> = [];
     for (const [key, value] of Object.entries(metadata)) {
-      if (!['title', 'executionMode', 'worktreePath', 'queuePosition', 'currentStep', 'notificationPolicy'].includes(key)) continue;
+      if (!['title', 'executionMode', 'branchName', 'worktreePath', 'queuePosition', 'queueReason', 'currentStep', 'pendingDecision', 'changedFiles', 'artifactCount', 'resultSummary', 'notificationPolicy'].includes(key)) continue;
       fields.push(`${key}=?`);
-      values.push((value ?? null) as string | number | null);
+      values.push((key === 'changedFiles' ? JSON.stringify(value ?? []) : (value ?? null)) as string | number | null);
     }
     if (fields.length === 0) return;
-    values.push(jobId);
-    this.db.prepare(`UPDATE jobs SET ${fields.join(", ")} WHERE jobId=?`).run(...values);
+    values.push(Date.now(), jobId);
+    this.db.prepare(`UPDATE jobs SET ${fields.join(", ")}, updatedAt=? WHERE jobId=?`).run(...values);
   }
 
   // --- events ---
@@ -386,7 +421,7 @@ export class Store {
           "INSERT INTO events (jobId,seq,kind,payload,createdAt) VALUES (?,?,?,?,?)",
         )
         .run(jobId, seq, kind, payload == null ? null : JSON.stringify(payload), at);
-      this.db.prepare("UPDATE jobs SET lastEventAt=? WHERE jobId=?").run(at, jobId);
+      this.db.prepare("UPDATE jobs SET lastEventAt=?, updatedAt=? WHERE jobId=?").run(at, at, jobId);
     });
   }
 

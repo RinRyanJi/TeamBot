@@ -6,6 +6,8 @@ Evidence:
 - Alias resolution never accepts a cwd; unknown explicit projects are refused.
 - Multiple registered projects return an ambiguity result instead of guessing.
 - A focused project is restored per chat and expires after the configured TTL.
+- Focused self-chat accepts plain natural-language work; ambiguous self-chat shows authorized project choices.
+- Project conversation bindings are enforced before focus/run resolution.
 - Store persists activeProjectId and expiresAt in conversation_context.
 
 Result: PASS (5 tests in the project-first fixture; typecheck also passes).

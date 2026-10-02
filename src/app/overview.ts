@@ -10,12 +10,12 @@ export interface ProjectOverview {
   failed: number;
   jobs: Job[];
 }
-const ACTIVE = new Set(["queued", "starting", "running", "waiting", "approval", "recovering", "merge-pending"]);
+const ACTIVE = new Set(["queued", "starting", "running", "waiting", "waiting_input", "approval", "waiting_approval", "recovering", "merge-pending"]);
 
-export function buildOverview(jobs: Job[], projects: ProjectRegistry): ProjectOverview[] {
+export function buildOverview(jobs: Job[], projects: ProjectRegistry, allowedProjectIds?: ReadonlySet<string>): ProjectOverview[] {
   const groups = new Map<string, Job[]>();
   for (const job of jobs) groups.set(job.projectId, [...(groups.get(job.projectId) ?? []), job]);
-  return projects.all().map((project) => {
+  return projects.all().filter((project) => !allowedProjectIds || allowedProjectIds.has(project.projectId)).map((project) => {
     const projectJobs = groups.get(project.projectId) ?? [];
     return {
       projectId: project.projectId,
@@ -29,8 +29,8 @@ export function buildOverview(jobs: Job[], projects: ProjectRegistry): ProjectOv
   });
 }
 
-export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs = 8): string {
-  const groups = buildOverview(jobs, projects);
+export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs = 8, allowedProjectIds?: ReadonlySet<string>): string {
+  const groups = buildOverview(jobs, projects, allowedProjectIds);
   const total = groups.reduce((n, g) => n + g.jobs.length, 0);
   const lines = ["[TB] 專案總覽"];
   let remaining = maxJobs;
@@ -43,7 +43,7 @@ export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs =
     lines.push(`• ${label}：${group.active} 進行中、${group.completed} 已完成、${group.failed} 失敗/取消`);
     for (const job of group.jobs.slice(0, remaining)) {
       const mode = job.executionMode === "worktree" ? ` · worktree/${job.jobId}` : "";
-      const queue = job.queuePosition ? ` · queue #${job.queuePosition}` : "";
+      const queue = job.queuePosition ? ` · queue #${job.queuePosition}${job.queueReason ? ` (${job.queueReason})` : ""}` : "";
       const step = job.currentStep ? ` · ${job.currentStep}` : "";
       lines.push(`  ${job.jobId} · ${job.status}${mode}${queue}${step}${job.lastResult ? ` · ${job.lastResult.slice(0, 120)}` : ""}`);
       remaining -= 1;
@@ -58,12 +58,13 @@ export function formatTask(job: Job, projectName = job.projectId): string {
     `[TB ${job.jobId}] ${projectName}`,
     `標題：${job.title || "(未命名)"}`,
     `狀態：${job.status}`,
-    `模式：${job.executionMode ?? "main"}${job.worktreePath ? ` · ${pathTail(job.worktreePath)}` : ""}`,
-    `目前步驟：${job.currentStep ?? "(尚無)"}${job.queuePosition ? ` · 排隊第 ${job.queuePosition}` : ""}`,
+    `模式：${job.executionMode ?? "main"}${job.branchName ? ` · ${job.branchName}` : ""}${job.worktreePath ? ` · ${pathTail(job.worktreePath)}` : ""}`,
+    `目前步驟：${job.currentStep ?? "(尚無)"}${job.queuePosition ? ` · 排隊第 ${job.queuePosition}${job.queueReason ? ` (${job.queueReason})` : ""}` : ""}`,
+    `待處理：${job.pendingDecision ?? "(無)"} · 檔案：${job.changedFiles?.length ?? 0} · 產物：${job.artifactCount ?? 0}`,
     `來源聊天：${job.chatId}`,
     `Codex thread：${job.threadId ?? "尚未建立"}`,
-    `最近事件：${job.lastEventAt ?? "-"}`,
-    `結果：${job.lastResult ?? "(尚無)"}`,
+    `最近事件：${job.lastEventAt ?? "-"} · 更新：${job.updatedAt ?? "-"}`,
+    `結果：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`,
   ].join("\n");
 }
 
@@ -72,14 +73,16 @@ function pathTail(cwd: string): string {
   return parts.slice(-2).join("/") || cwd;
 }
 
-export function formatProjects(projects: ProjectRegistry): string {
-  const rows = projects.all().map((project) => {
+export function formatProjects(projects: ProjectRegistry, allowedProjectIds?: ReadonlySet<string>): string {
+  const rows = projects.all().filter((project) => !allowedProjectIds || allowedProjectIds.has(project.projectId)).map((project) => {
     const aliases = (project.aliases ?? []).join(", ") || "-";
     const branch = project.defaultBranch ?? "default";
     const execution = project.executionPolicy ?? "read-only";
     const lane = project.lanePolicy ?? "single-active";
     const repository = project.repository ? ` · repo: ${project.repository}` : "";
-    return `• ${project.name} (${project.projectId}) · ${pathTail(project.cwd)} · ${branch} · ${execution} · ${lane}${repository} · aliases: ${aliases}`;
+    const bindings = project.conversationBindings?.length ? ` · chats: ${project.conversationBindings.length}` : "";
+    const used = project.lastUsedAt ? ` · used: ${project.lastUsedAt}` : "";
+    return `• ${project.name} (${project.projectId}) · ${pathTail(project.cwd)} · ${branch} · ${execution} · ${lane}${repository}${bindings}${used} · aliases: ${aliases}`;
   });
   return `[TB] 專案\n${rows.join("\n") || "(無已登記專案)"}`;
 }
