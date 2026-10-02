@@ -14,6 +14,7 @@ export interface SelectorProfile {
   messageSelector: string;
   messageIdAttr: string;
   senderAttr: string;
+  senderFallbackAttrs?: string[];
   composeSelector: string;
   sendMode: "button" | "enter";
   sendButtonSelector?: string;
@@ -26,6 +27,7 @@ export const SELECTOR_PROFILES: Record<"fixture" | "teams", SelectorProfile> = {
     messageSelector: ".msg",
     messageIdAttr: "data-message-id",
     senderAttr: "data-sender-id",
+    senderFallbackAttrs: [],
     composeSelector: "#composer",
     sendMode: "button",
     sendButtonSelector: "#send",
@@ -37,6 +39,9 @@ export const SELECTOR_PROFILES: Record<"fixture" | "teams", SelectorProfile> = {
     messageSelector: "[data-mid]",
     messageIdAttr: "data-mid",
     senderAttr: "data-acc-id",
+    // New Teams builds expose the author as data-person-mri on message rows.
+    // Keep data-acc-id as the first choice for older tenants/DOM variants.
+    senderFallbackAttrs: ["data-person-mri"],
     composeSelector: '[contenteditable="true"][role="textbox"]',
     sendMode: "enter",
   },
@@ -145,20 +150,24 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
       if (w.__teambotObserving) return;
       w.__teambotObserving = true;
       var MID = ${JSON.stringify(p.messageIdAttr)};
-      var SENDER = ${JSON.stringify(p.senderAttr)};
+      var SENDER_ATTRS = ${JSON.stringify([p.senderAttr, ...(p.senderFallbackAttrs ?? [])])};
       var MSG = ${JSON.stringify(p.messageSelector)};
       var seen = new Set();
       var validSender = function (value) {
         return !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
       };
       var senderFor = function (el) {
-        var nested = el.querySelector('[' + SENDER + ']');
-        var nestedValue = nested ? nested.getAttribute(SENDER) : null;
-        if (validSender(nestedValue)) return nestedValue;
+        for (var ai = 0; ai < SENDER_ATTRS.length; ai++) {
+          var nested = el.querySelector('[' + SENDER_ATTRS[ai] + ']');
+          var nestedValue = nested ? nested.getAttribute(SENDER_ATTRS[ai]) : null;
+          if (validSender(nestedValue)) return nestedValue;
+        }
         var current = el;
         for (var depth = 0; current && depth < 8; depth++, current = current.parentElement) {
-          var own = current.getAttribute(SENDER);
-          if (validSender(own)) return own;
+          for (var ownIndex = 0; ownIndex < SENDER_ATTRS.length; ownIndex++) {
+            var own = current.getAttribute(SENDER_ATTRS[ownIndex]);
+            if (validSender(own)) return own;
+          }
         }
         return '';
       };
@@ -197,14 +206,19 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
       (els, p) =>
         els.map((el) => {
           const validSender = (value: string | null): value is string => Boolean(value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value));
+          const senderAttrs = [p.senderAttr, ...(p.senderFallbackAttrs ?? [])];
           let senderId = "";
-          const nested = el.querySelector("[" + p.senderAttr + "]");
-          const nestedValue = nested?.getAttribute(p.senderAttr) ?? null;
-          if (validSender(nestedValue)) senderId = nestedValue;
+          for (const attr of senderAttrs) {
+            const nested = el.querySelector("[" + attr + "]");
+            const nestedValue = nested?.getAttribute(attr) ?? null;
+            if (validSender(nestedValue)) { senderId = nestedValue; break; }
+          }
           let current: typeof el | null = el;
           for (let depth = 0; !senderId && current && depth < 8; depth += 1, current = current.parentElement) {
-            const own = current.getAttribute(p.senderAttr);
-            if (validSender(own)) { senderId = own; break; }
+            for (const attr of senderAttrs) {
+              const own = current.getAttribute(attr);
+              if (validSender(own)) { senderId = own; break; }
+            }
           }
           return {
             messageId: el.getAttribute(p.messageIdAttr) ?? "",
@@ -212,9 +226,16 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
             text: (el.textContent ?? "").trim(),
           };
         }),
-      { senderAttr: this.profile.senderAttr, messageIdAttr: this.profile.messageIdAttr },
+      {
+        senderAttr: this.profile.senderAttr,
+        senderFallbackAttrs: this.profile.senderFallbackAttrs ?? [],
+        messageIdAttr: this.profile.messageIdAttr,
+      },
     );
-    return raw.map((r) => ({ chatId, ...r }));
+    // Teams renders system/announcement rows with data-mid but no author.
+    // Keep those rows out of the command inbox; a later poll can pick up a
+    // user message once its author metadata is available.
+    return raw.filter((r) => r.senderId).map((r) => ({ chatId, ...r }));
   }
 
   /** Select a visible Teams conversation by its stable thread id. */

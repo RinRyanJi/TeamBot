@@ -39,4 +39,8 @@ Record the date, tenant alias (never tokens/cookies), chat labels, observed repl
 
 Read-only preflight observed 2026-10-03: the isolated Electron Teams session was already authenticated (`authenticated:true`, URL `https://teams.cloud.microsoft/`), but no target chat was open, so stable chat/message/sender IDs were not available. No message was sent and the live acceptance steps were not claimed.
 
+Follow-up read-only probe after selector hardening observed stable chat/message/sender IDs
+for author-bearing rows; senderless system rows were counted and excluded. No message was
+sent, and the group/self-chat acceptance gates below remain pending.
+
 Status: PENDING USER-RUN

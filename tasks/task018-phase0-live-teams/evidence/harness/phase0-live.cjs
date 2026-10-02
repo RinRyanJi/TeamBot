@@ -36,6 +36,14 @@ const DESKTOP_UA =
 // Not-authenticated signals: an auth host, or a Teams error/landing path that appears
 // when there is no valid session.
 const NOT_AUTHED = /login\.(microsoftonline|live)\.com|login\.microsoft\.com|\/error\b|\/eoa\b|\/go\b/i;
+const safeUrl = (raw) => {
+  try {
+    const parsed = new URL(raw);
+    return parsed.origin + parsed.pathname;
+  } catch {
+    return String(raw).split(/[?#]/, 1)[0];
+  }
+};
 const FIXTURE = pathToFileURL(
   path.join(__dirname, "..", "..", "..", "..", "tests", "fixtures", "teams-fixture.html"),
 ).href;
@@ -53,7 +61,7 @@ const PROBE_JS = `(() => {
       hasText: !!(el.textContent && el.textContent.trim()),
     }));
     const chatId = fchat.getAttribute('data-chat-id');
-    return { url: location.href, title: document.title, strategy: 'fixture', chatId,
+    return { url: location.origin + location.pathname, title: document.title, strategy: 'fixture', chatId,
       messages, stableChatId: !!chatId,
       stableMessageIds: messages.length > 0 && messages.every((m) => !!m.messageId),
       stableSenderIds: messages.length > 0 && messages.every((m) => !!m.senderId) };
@@ -64,14 +72,19 @@ const PROBE_JS = `(() => {
   const chatId = threadEl ? threadEl.getAttribute('data-track-thread-id') : null;
   const msgEls = Array.from(document.querySelectorAll('[data-mid]'));
   const validSender = (value) => !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+  const senderAttrs = ['data-acc-id', 'data-person-mri'];
   const senderFor = (el) => {
-    const nested = el.querySelector('[data-acc-id]');
-    const nestedValue = nested ? nested.getAttribute('data-acc-id') : null;
-    if (validSender(nestedValue)) return nestedValue;
+    for (const attr of senderAttrs) {
+      const nested = el.querySelector('[' + attr + ']');
+      const nestedValue = nested ? nested.getAttribute(attr) : null;
+      if (validSender(nestedValue)) return nestedValue;
+    }
     let current = el;
     for (let depth = 0; current && depth < 8; depth++, current = current.parentElement) {
-      const own = current.getAttribute('data-acc-id');
-      if (validSender(own)) return own;
+      for (const attr of senderAttrs) {
+        const own = current.getAttribute(attr);
+        if (validSender(own)) return own;
+      }
     }
     return null;
   };
@@ -82,15 +95,17 @@ const PROBE_JS = `(() => {
       hasText: !!(el.textContent && el.textContent.trim()),
     };
   });
+  const senderMessages = messages.filter((m) => !!m.senderId);
   return {
-    url: location.href,
+    url: location.origin + location.pathname,
     title: document.title,
     strategy: 'teams-v2',
     chatId,
     messages,
     stableChatId: !!chatId,
     stableMessageIds: messages.length > 0 && messages.every((m) => !!m.messageId),
-    stableSenderIds: messages.length > 0 && messages.every((m) => !!m.senderId),
+    stableSenderIds: senderMessages.length > 0 && senderMessages.every((m) => !!m.senderId),
+    senderlessMessageCount: messages.length - senderMessages.length,
   };
 })()`;
 
@@ -119,8 +134,41 @@ const DIAG_JS = `(() => {
   // Sample aria-labels of list/tree items (often contain sender + preview).
   const itemAria = Array.from(document.querySelectorAll('[role=listitem],[role=treeitem],[role=row]'))
     .slice(0, 8).map((e) => (e.getAttribute('aria-label') || '').slice(0, 90));
+  const classifySender = (value) => {
+    if (!value) return 'none';
+    if (/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value)) return 'generic';
+    if (/^(?:\d+:|orgid:|[0-9a-f]{8}-[0-9a-f-]{27,})/i.test(value)) return 'structured';
+    return 'other';
+  };
+  const messageSenderKinds = Array.from(document.querySelectorAll('[data-mid]')).slice(-10).map((el) => {
+    const values = [];
+    const nested = el.querySelector('[data-acc-id]');
+    if (nested) values.push(nested.getAttribute('data-acc-id'));
+    const nestedPerson = el.querySelector('[data-person-mri]');
+    if (nestedPerson) values.push(nestedPerson.getAttribute('data-person-mri'));
+    let current = el;
+    for (let depth = 0; current && depth < 8; depth++, current = current.parentElement) {
+      values.push(current.getAttribute('data-acc-id'));
+      values.push(current.getAttribute('data-person-mri'));
+    }
+    return { hasMessageId: !!el.getAttribute('data-mid'), kinds: [...new Set(values.map(classifySender))] };
+  });
+  const messageStructure = Array.from(document.querySelectorAll('[data-mid]')).slice(-3).map((el) => {
+    let container = el;
+    for (let depth = 0; container && depth < 8; depth++, container = container.parentElement) {
+      if (/^chat-pane-(message|item)$/.test(container.getAttribute('data-tid') || '')) break;
+    }
+    const scope = container || el;
+    return {
+      ancestorTid: scope.getAttribute('data-tid'),
+      scopeAccCount: scope.querySelectorAll('[data-acc-id]').length,
+      scopePersonMriCount: scope.querySelectorAll('[data-person-mri]').length,
+      scopeMidCount: scope.querySelectorAll('[data-mid]').length,
+      parentTid: el.parentElement?.getAttribute('data-tid') || null,
+    };
+  });
   return {
-    url: location.href,
+    url: location.origin + location.pathname,
     title: document.title,
     attrNamesCount: Object.keys(attrNames).length,
     idishAttrNames: Object.keys(attrNames).filter((n) => /id|tid|mid|conversation|thread|mri|oid|upn|author|sender/i.test(n)),
@@ -129,6 +177,8 @@ const DIAG_JS = `(() => {
     convLike,
     roleCounts,
     itemAria,
+    messageSenderKinds,
+    messageStructure,
   };
 })()`;
 
@@ -138,14 +188,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MSG_JS = `(() => {
   const els = Array.from(document.querySelectorAll('[data-mid]'));
   const validSender = (value) => !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+  const senderAttrs = ['data-acc-id', 'data-person-mri'];
   const senderFor = (el) => {
-    const nested = el.querySelector('[data-acc-id]');
-    const nestedValue = nested ? nested.getAttribute('data-acc-id') : null;
-    if (validSender(nestedValue)) return nestedValue;
+    for (const attr of senderAttrs) {
+      const nested = el.querySelector('[' + attr + ']');
+      const nestedValue = nested ? nested.getAttribute(attr) : null;
+      if (validSender(nestedValue)) return nestedValue;
+    }
     let current = el;
     for (let depth = 0; current && depth < 8; depth++, current = current.parentElement) {
-      const own = current.getAttribute('data-acc-id');
-      if (validSender(own)) return own;
+      for (const attr of senderAttrs) {
+        const own = current.getAttribute(attr);
+        if (validSender(own)) return own;
+      }
     }
     return null;
   };
@@ -187,13 +242,18 @@ async function doSendTest(wc, outDir, fs) {
       let senderId = null;
       if (hit) {
         const validSender = (value) => !!value && !/^(announcing-region-message-list|message-list|chat-pane(?:-|$))/i.test(value);
+        const senderAttrs = ['data-acc-id', 'data-person-mri'];
         let current = hit;
-        const nested = hit.querySelector('[data-acc-id]');
-        const nestedValue = nested ? nested.getAttribute('data-acc-id') : null;
-        if (validSender(nestedValue)) senderId = nestedValue;
+        for (const attr of senderAttrs) {
+          const nested = hit.querySelector('[' + attr + ']');
+          const nestedValue = nested ? nested.getAttribute(attr) : null;
+          if (validSender(nestedValue)) { senderId = nestedValue; break; }
+        }
         for (let depth = 0; !senderId && current && depth < 8; depth++, current = current.parentElement) {
-          const own = current.getAttribute('data-acc-id');
-          if (validSender(own)) { senderId = own; break; }
+          for (const attr of senderAttrs) {
+            const own = current.getAttribute(attr);
+            if (validSender(own)) { senderId = own; break; }
+          }
         }
       }
       return { found: !!hit, messageId: hit ? hit.getAttribute('data-mid') : null, senderId, threadId: t ? t.getAttribute('data-track-thread-id') : null };
@@ -318,7 +378,7 @@ app.whenReady().then(async () => {
         const info = await view.webContents.executeJavaScript(OPEN_JS);
         console.log(
           "OPEN_CHAT " +
-            JSON.stringify({ title: info.title, threadIdPrefix: info.threadId ? info.threadId.slice(0, 14) + "…" : "none", hasCompose: info.hasCompose }),
+          JSON.stringify({ threadIdPrefix: info.threadId ? info.threadId.slice(0, 14) + "…" : "none", hasCompose: info.hasCompose }),
         );
         if (fs.existsSync(triggerFile)) {
           busy = true;
@@ -338,7 +398,7 @@ app.whenReady().then(async () => {
     await sleep(15000); // let the Teams SPA + child iframes settle
     const finalUrl = view.webContents.getURL();
     if (NOT_AUTHED.test(finalUrl)) {
-      console.log("PHASE0_PROBE " + JSON.stringify({ authenticated: false, url: finalUrl }));
+      console.log("PHASE0_PROBE " + JSON.stringify({ authenticated: false, url: safeUrl(finalUrl) }));
       app.exit(4); // not logged in: run --login first
       return;
     }
@@ -373,6 +433,12 @@ app.whenReady().then(async () => {
   fs.mkdirSync(outDir, { recursive: true });
   setInterval(async () => {
     try {
+      if (DIAG) {
+        const frames = await runInAllFrames(view.webContents, DIAG_JS);
+        const interesting = frames.filter((f) => f.result && f.result.distinctTidCount > 0);
+        console.log("PHASE0_DIAG " + JSON.stringify({ frameCount: frames.length, frames: interesting.length ? interesting : frames }));
+        return;
+      }
       const probe = await view.webContents.executeJavaScript(PROBE_JS);
       fs.writeFileSync(path.join(outDir, "phase0-results.json"), JSON.stringify(probe, null, 2));
       console.log("PHASE0_PROBE " + JSON.stringify({ url: probe.url, stableChatId: probe.stableChatId, stableMessageIds: probe.stableMessageIds, stableSenderIds: probe.stableSenderIds }));

@@ -28,11 +28,20 @@ Thread id formats observed: self-chat = `48:notes…`; group = `19:…` (standar
 |---|---|
 | chatId / thread | `[data-track-thread-id]` (also `data-track-thread-type` / `-modality`) |
 | messageId | `[data-mid]` |
-| senderId / author | `[data-acc-id]` |
+| senderId / author | `[data-acc-id]`; current Teams builds may use `[data-person-mri]` as a fallback |
 | message container | `data-tid="chat-pane-message"` / `chat-pane-item` |
 | chat list item | `role=treeitem` |
 | compose box | `[contenteditable="true"][role="textbox"]` (send via Enter; `insertText` + synthesized Return) |
 | content frame | single top frame (`teams.cloud.microsoft`); harness still probes all frames for safety |
+
+## Follow-up observation (2026-10-03)
+
+A read-only probe against the already-authenticated isolated surface still found
+`data-track-thread-id` and `data-mid`. Some visible rows were system/announcement rows
+without an author; TeamBot now excludes those rows from the command inbox and accepts
+`data-person-mri` when `data-acc-id` is absent. The probe reported stable chat/message/
+sender identifiers for the author-bearing rows and counted the senderless rows separately.
+No message was sent during this follow-up.
 
 ## Still pending (user / follow-up)
 

@@ -44,7 +44,15 @@ test("teams profile: read via real selectors, send via contenteditable+Enter, re
       d.appendChild(a); document.getElementById('messages').appendChild(d);
     })()`);
     const generic = (await adapter.readMessages()).find((m) => m.messageId === "1700000000099");
-    assert.equal(generic?.senderId, "");
+    assert.equal(generic, undefined);
+    await page.evaluate(`(() => {
+      var d = document.createElement('div');
+      d.setAttribute('data-mid', '1700000000100');
+      var a = document.createElement('span'); a.setAttribute('data-person-mri', 'mri:user-fallback'); a.textContent = 'fallback author';
+      d.appendChild(a); document.getElementById('messages').appendChild(d);
+    })()`);
+    const fallback = (await adapter.readMessages()).find((m) => m.messageId === "1700000000100");
+    assert.equal(fallback?.senderId, "mri:user-fallback");
 
     // Send via the contenteditable + Enter path, then reconcile by data-mid.
     const id = await adapter.sendMessage("[TB T001] started");

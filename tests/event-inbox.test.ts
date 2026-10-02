@@ -80,6 +80,17 @@ test("MutationObserver pushes new messages over CDP; dedupes existing ids", asyn
     await sleep(300);
     assert.equal(pushed.length, 1, "generic announcement identity is not pushed as a sender");
 
+    await page.evaluate(`(() => {
+      var d = document.createElement('div');
+      d.className = 'chat-pane-message';
+      d.setAttribute('data-mid', '9000003');
+      var a = document.createElement('span'); a.setAttribute('data-person-mri', 'mri:observer-fallback'); a.textContent = 'fallback sender';
+      d.appendChild(a); document.getElementById('messages').appendChild(d);
+    })()`);
+    await sleep(300);
+    assert.equal(pushed.length, 2, "data-person-mri fallback is accepted");
+    assert.equal(pushed[1]?.senderId, "mri:observer-fallback");
+
     // Re-inject a node carrying an EXISTING baseline id -> must be deduped (not pushed).
     await page.evaluate(`(() => {
       var d = document.createElement('div');
@@ -89,7 +100,7 @@ test("MutationObserver pushes new messages over CDP; dedupes existing ids", asyn
       document.getElementById('messages').appendChild(d);
     })()`);
     await sleep(400);
-    assert.equal(pushed.length, 1, "existing id deduped, not pushed again");
+    assert.equal(pushed.length, 2, "existing id deduped, not pushed again");
   } finally {
     await adapter.close().catch(() => undefined);
     cp.kill();

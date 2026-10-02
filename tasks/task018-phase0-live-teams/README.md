@@ -23,7 +23,8 @@ User executes the harness and records results in evidence/results.md (go/no-go +
 `--probe` against the real authenticated Teams web (`teams.cloud.microsoft`) and **extracted
 stable chatId / messageId / senderId** from 10 real messages — the critical Phase-0
 feasibility unknown is **GO**. Real selectors discovered: `data-track-thread-id` (chat),
-`data-mid` (message), `data-acc-id` (sender); a supported-browser UA is required. Details:
+`data-mid` (message), `data-acc-id` (sender; `data-person-mri` fallback on newer DOMs);
+a supported-browser UA is required. Details:
 `evidence/phase0-findings.md` (raw IDs are gitignored, not committed). Dual-surface
 (self+group simultaneously), background updates, reply-targeting, and phone push remain
 follow-ups.
