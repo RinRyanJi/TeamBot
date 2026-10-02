@@ -8,12 +8,13 @@
 //   $env:TEAMBOT_PROJECTS_JSON = '[{"projectId":"TeamBot","cwd":"D:\\\\workspace\\\\GitBank\\\\GitRin\\\\TeamBot","aliases":["tb"]}]'
 //   node --experimental-strip-types --experimental-sqlite scripts/e2e-v4-run.ts
 //
-// Optional: TEAMBOT_GROUP_CHAT_IDS, TEAMBOT_ALLOWED_SENDERS,
+// Instead of TEAMBOT_PROJECTS_JSON, set TEAMBOT_PROJECTS_FILE to the desktop
+// console's projects.json. Optional: TEAMBOT_GROUP_CHAT_IDS, TEAMBOT_ALLOWED_SENDERS,
 // TEAMBOT_MAX_CONCURRENT, TEAMBOT_DB,
 // TEAMBOT_TEAMS_URL, TEAMBOT_TEAMS_PORT, TEAMBOT_SELF_CHAT_ID (required with groups).
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, join, normalize } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdirSync } from "node:fs";
 import { PlaywrightTeamsAdapter } from "../src/transports/teams/playwright-adapter.ts";
@@ -22,6 +23,7 @@ import { CodexAdapter } from "../src/codex/adapter.ts";
 import { Store, type Pairing } from "../src/storage/store.ts";
 import { Coordinator } from "../src/app/coordinator.ts";
 import { ProjectRegistry, type ProjectDef } from "../src/app/projects.ts";
+import { defaultProjectConfigPath, loadProjectConfig, parseProjectConfig } from "../src/app/project-config.ts";
 import { bootRecovery, saveResidentThread } from "../src/supervisor/session.ts";
 import { reconcileOutbox, offlineGapNotice } from "../src/supervisor/recovery.ts";
 import { createBaseline } from "../src/app/desktop-logic.ts";
@@ -44,15 +46,16 @@ function envList(name: string): string[] {
 
 function parseProjects(): ProjectDef[] {
   const raw = process.env.TEAMBOT_PROJECTS_JSON;
-  if (!raw) throw new Error("TEAMBOT_PROJECTS_JSON is required; phone messages may never submit a cwd");
-  const parsed = JSON.parse(raw) as unknown;
-  if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("TEAMBOT_PROJECTS_JSON must be a non-empty array");
-  return parsed.map((value) => {
-    if (value == null || typeof value !== "object") throw new Error("invalid project profile");
-    const project = value as ProjectDef;
-    if (!project.projectId || !project.cwd || !isAbsolute(project.cwd)) throw new Error(`project ${project.projectId ?? "?"} needs an absolute cwd`);
-    return { ...project, cwd: normalize(project.cwd) };
-  });
+  if (raw) return parseProjectConfig(raw);
+  const configPath = defaultProjectConfigPath(process.env);
+  try {
+    return loadProjectConfig(configPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      throw new Error(`no project profiles found; set TEAMBOT_PROJECTS_JSON or create ${configPath}`);
+    }
+    throw error;
+  }
 }
 
 function rolesFor(groupId: string): Record<string, "owner" | "operator" | "viewer"> {

@@ -256,7 +256,7 @@ artifacts(taskId, path, kind, hash, deliveryStatus)
 - Project Profile、聊天 active context、overview、task 短碼。
 - 所有回報首行加入 Project + Task。
 - 多專案路由與歧義詢問；不再以 AgentHub 作為無條件 fallback。
-- 更新 `settings`、桌面註冊畫面和診斷輸出。
+- 更新 `settings`、桌面註冊畫面和診斷輸出（已由本機控制台的 `projects.json` 設定流程提供）。
 
 ### M1：多專案可靠執行
 

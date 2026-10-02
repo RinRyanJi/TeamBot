@@ -41,10 +41,12 @@ test("electron console main: close hides to tray; explicit quit drains running j
     aliveAfterClose: boolean;
     drained: boolean;
     waitedMs: number;
+    hasRegistrationForm: boolean;
   };
   assert.equal(r.hiddenAfterClose, true, "closing the window must hide (minimize to tray)");
   assert.equal(r.aliveAfterClose, true, "app must stay alive after window close");
   assert.equal(r.drained, true, "explicit quit must drain running jobs");
   assert.ok(r.waitedMs >= 250, `quit must WAIT for the running job (waited ${r.waitedMs}ms)`);
+  assert.equal(r.hasRegistrationForm, true, "desktop console must expose project registration");
   assert.equal(res.code, 0);
 });

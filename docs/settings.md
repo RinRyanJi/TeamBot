@@ -12,6 +12,17 @@
 | 保留 | approvals/cache/jobs TTL | 見 `DEFAULT_RETENTION`（30/14/30 天），可調整。 |
 | Codex | 釘選版本 0.156.1、sandbox/approval policy | 由既有 Codex 設定決定實際執行權限。 |
 
+## 桌面專案註冊
+
+啟動 `npx electron launcher/electron/console-main.cjs` 會開啟本機控制台。從「登記／編輯專案」新增或修改專案，控制台會：
+
+- 只接受絕對路徑，並在儲存前檢查 Project ID、顯示名稱和 alias 是否衝突；
+- 只在畫面顯示路徑尾段，完整路徑只寫入使用者資料目錄；
+- 以原子寫入保存 `projects.json`，避免 runtime 重啟時讀到半份設定；
+- 允許編輯或移除專案，儲存後重新啟動 runtime 套用設定。
+
+預設檔案位置是 Windows 的 `%LOCALAPPDATA%\TeamBot\projects.json`（Electron 控制台的 user-data 目錄）。也可以用 `TEAMBOT_PROJECTS_FILE` 指定位置。若同時設定 `TEAMBOT_PROJECTS_JSON`，runtime 會優先使用該環境變數，適合一次性的測試配置。
+
 ## 資料位置
 
 設定、Teams profile、SQLite、日誌置於使用者資料目錄；Git 只收原始碼／文件／去識別 fixture。
@@ -46,6 +57,13 @@ $env:TEAMBOT_SELF_SENDER_ID = "<Teams sender id>"
 $env:TEAMBOT_SELF_CHAT_ID = "<self-chat thread id>"
 $env:TEAMBOT_PROJECTS_JSON = '[{"projectId":"TeamBot","cwd":"D:\\workspace\\GitBank\\GitRin\\TeamBot","aliases":["tb"]}]'
 $env:TEAMBOT_GROUP_CHAT_IDS = "<optional-group-thread-id>"
+npm run run:v4
+```
+
+完成桌面註冊後，也可以改用保存的設定檔啟動（不必把路徑放進 shell history）：
+
+```powershell
+$env:TEAMBOT_PROJECTS_FILE = "$env:LOCALAPPDATA\TeamBot\projects.json"
 npm run run:v4
 ```
 

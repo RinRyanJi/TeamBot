@@ -23,6 +23,8 @@ TeamBot 預計使用自己的 Electron 瀏覽器登入 Teams，由 Playwright �
 - [User Cases v4](docs/user-cases-v4.md)
 - [分階段實作與驗收計畫](docs/implementation-plan.md)
 
+第一次使用可先啟動 `npx electron launcher/electron/console-main.cjs`，在桌面控制台登記專案；runtime 會讀取使用者資料目錄的 `projects.json`，手機訊息不需要也不能提交本機路徑。
+
 參考相鄰專案 `codex-chatgpt-web` 的瀏覽器與程序生命週期設計，在本儲存庫建立獨立原始碼。後續若移植其 MIT 授權程式，保留原始版權及授權聲明。
 
 GitHub：<https://github.com/RinRyanJi/TeamBot>

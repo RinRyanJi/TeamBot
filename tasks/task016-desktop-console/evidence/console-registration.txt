@@ -1,0 +1,11 @@
+# Desktop project registration evidence
+
+Local checks:
+
+- `node --check launcher/electron/console-main.cjs` — passed.
+- `node --check launcher/electron/console-preload.cjs` — passed.
+- Project config tests — 2/2 passed (absolute-path and alias collision rejection; atomic save/load from a user-data path).
+- Full `npm test` — 184/184 passed.
+- `npx electron launcher/electron/console-main.cjs --smoke` — exit 0; `hasRegistrationForm:true`, `projectCount:0`, tray minimize and drain checks passed.
+
+The smoke run used an empty disposable user-data state. It did not send Teams messages and did not read or persist credentials.

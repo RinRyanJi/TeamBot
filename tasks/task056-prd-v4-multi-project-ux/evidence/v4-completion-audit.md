@@ -16,6 +16,7 @@ Observed evidence:
 - 182 tests passed, including the 48-test v4 suite with all 12 User Cases v4 fixtures, coordinator result folding, task detail summaries, and `completed_with_followup` for failed commands.
 - Project-first routing refuses ambiguous self-chat requests and accepts focused natural language.
 - Project profiles reject alias/name collisions, enforce conversation bindings, and expose safe display data.
+- Desktop onboarding now provides a local registration/edit/remove form with absolute-path validation and an atomic user-data `projects.json`; the runtime can load that file without putting paths in shell history.
 - Ambiguous self-chat requests now store a short-lived numbered choice; replying `1`/`2`/`3` starts exactly one task in the selected project.
 - Task records persist title, execution mode, branch/worktree, queue reason, decision state, changed files, artifact rows (path/kind/hash/delivery state), result summary and update time; `artifact` lists those stored rows.
 - Different projects can run concurrently; the same main project lane remains serialized.

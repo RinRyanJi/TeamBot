@@ -19,7 +19,7 @@ UI build passes; component/logic tests for project registration path normalizati
 
 ## Result
 
-Completed — logic + rendered UI + **GUI tray/quit main implemented and Electron-verified**.
+Completed — project registration UI + persisted profile file + status page + **GUI tray/quit main implemented and Electron-verified**.
 
 ### GUI tray/quit main (added)
 - `src/app/quit-coordinator.ts` — `QuitCoordinator`: `stopAccepting()` + `drain(timeoutMs)` that waits for running jobs before quit.
@@ -28,11 +28,14 @@ Completed — logic + rendered UI + **GUI tray/quit main implemented and Electro
 
 - `src/app/desktop-logic.ts` — `normalizeProjectPath` (absolute-only, normalized), `registerProject`, `createBaseline` (latest visible message → history not executed).
 - `src/app/status-page.ts` — `renderStatusHtml(jobs)` renders one escaped row per job + count.
+- `launcher/electron/console-main.cjs` + `console-preload.cjs` — local project registration/edit/remove form, collision and absolute-path validation, atomic user-data persistence, and a restricted IPC bridge used only by the local console.
+- `src/app/project-config.ts` — shared config-file parser/normalizer used by the v4 runtime; `TEAMBOT_PROJECTS_JSON` remains available for disposable test runs.
 - `scripts/console-smoke.cjs` — Electron console window rendering the status page.
 
 Real verification:
 - `console-logic-test.txt` — 4 logic units (path must be absolute; normalized cwd stored; baseline = latest message / now-if-empty; status page renders rows + HTML-escapes) + the electron test = 5/5.
 - `console-build.txt` — **REAL Electron** launched the console window, loaded the status page, and read back `jobCount=1, firstJobId=T001` from the DOM; exit 0.
+- `console-registration.txt` — project config parser tests (normalization, collision/absolute-path rejection, atomic save/load) plus Electron smoke assertion that the registration form is present; all passed.
 
 ## Manual run (interactive tray/quit)
 Tray minimize, explicit-quit coordination, and live pairing UI are GUI-interactive and
