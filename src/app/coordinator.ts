@@ -14,7 +14,7 @@ import { parseCommand } from "../router/parser.ts";
 import { parseV4Command } from "../router/v4-parser.ts";
 import { JobIdGenerator } from "./ids.ts";
 import { ConversationContextStore, resolveProject } from "./context.ts";
-import { formatOverview, formatProjects, formatTask } from "./overview.ts";
+import { formatOverview, formatProjects, formatTask, formatTaskDetails } from "./overview.ts";
 import { GitWorktreeRuntime, type WorktreeRuntime } from "../supervisor/worktree-runtime.ts";
 import { MultiTaskScheduler } from "../supervisor/worktrees.ts";
 import { ApprovalManager } from "../router/approvals.ts";
@@ -355,7 +355,7 @@ export class Coordinator {
           await this.reply("sys", "這個工作屬於另一個聊天，無法查看。", msg.chatId);
           return { action: "task:denied" };
         }
-        const details = command.details ? `\n事件：${this.store.listEvents(job.jobId).slice(-8).map((e) => `${e.seq}:${e.kind}`).join(", ") || "(無)"}` : "";
+        const details = command.details ? formatTaskDetails(this.store.listEvents(job.jobId)) : "";
         await this.reply(job.jobId, formatTask(job, this.projects.get(job.projectId)?.name) + details, msg.chatId);
         return { action: "task", jobId: job.jobId };
       }
@@ -586,7 +586,11 @@ export class Coordinator {
     if (job.chatId !== msg.chatId) return false;
     if (this.admins.includes(msg.senderId)) return true;
     if (this.pairing.kind === "self") return job.senderId === msg.senderId;
-    const role = this.pairing.roles?.[msg.senderId] ?? "operator";
+    // Group members without an explicit role are read-only by default. This
+    // must also apply to the legacy command path, not only the v4 parser.
+    const role = this.pairing.kind === "group"
+      ? (this.pairing.roles?.[msg.senderId] ?? "viewer")
+      : "owner";
     return role === "owner" || role === "operator";
   }
 
@@ -879,14 +883,29 @@ export class Coordinator {
     const wasCancelled = this.cancelled.delete(jobId);
     const job = this.store.getJob(jobId);
     const worktree = job?.executionMode === "worktree";
-    const finalStatus = wasCancelled ? "cancelled" : worktree ? "merge-pending" : "completed";
+    const hasFailedCommand = result.commands.some((command) => command.exitCode !== null && command.exitCode !== 0);
+    const finalStatus = wasCancelled
+      ? "cancelled"
+      : worktree
+        ? "merge-pending"
+        : hasFailedCommand
+          ? "completed_with_followup"
+          : "completed";
     this.store.updateJobStatus(jobId, finalStatus, safeFinalText || undefined);
     this.store.updateJobMetadata(jobId, {
       resultSummary: safeSummary || safeFinalText || null,
       changedFiles: result.files.map((file) => file.path),
       pendingDecision: null,
     });
-    await this.reply(jobId, `${wasCancelled ? "已取消" : worktree ? "已完成，待合併" : "已完成"}；\n${safeSummary || `結果：${safeFinalText || "(無輸出)"}`}`, msg.chatId);
+    const projectName = this.projects.get(projectId)?.name ?? projectId;
+    const stateLabel = wasCancelled
+      ? "已取消"
+      : worktree
+        ? "已完成，待合併"
+        : hasFailedCommand
+          ? "已完成但需後續"
+          : "已完成";
+    await this.reply(jobId, `Project：${projectName} · Task：${jobId} · ${stateLabel}\n${safeSummary || `結果：${safeFinalText || "(無輸出)"}`}`, msg.chatId);
     return { action: "ran", jobId };
   }
 

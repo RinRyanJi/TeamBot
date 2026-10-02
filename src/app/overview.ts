@@ -68,6 +68,41 @@ export function formatTask(job: Job, projectName = job.projectId): string {
   ].join("\n");
 }
 
+/**
+ * Details are intentionally a compact, action-oriented view. Raw Codex event
+ * payloads stay in the local store; only the useful command/plan/diff/test
+ * hints are rendered for a phone-sized Teams message.
+ */
+export function formatTaskDetails(events: Array<{ seq: number; kind: string; payload: unknown }>): string {
+  const lines: string[] = [];
+  for (const event of events.slice(-12)) {
+    const payload = event.payload != null && typeof event.payload === "object"
+      ? event.payload as Record<string, unknown>
+      : {};
+    const item = payload.item != null && typeof payload.item === "object"
+      ? payload.item as Record<string, unknown>
+      : payload;
+    const type = typeof item.type === "string" ? item.type : "";
+    if (type.toLowerCase() === "commandexecution" || event.kind.includes("command")) {
+      const command = typeof item.command === "string" ? item.command : typeof payload.command === "string" ? payload.command : "(命令)";
+      const exitCode = typeof item.exitCode === "number" ? ` · exit ${item.exitCode}` : "";
+      lines.push(`命令：${command}${exitCode}`);
+    } else if (event.kind.includes("plan")) {
+      const plan = Array.isArray(payload.plan) ? payload.plan : undefined;
+      lines.push(`計畫：${plan?.length ? `${plan.length} 個步驟` : "已更新"}`);
+    } else if (event.kind.includes("diff") || type.toLowerCase() === "filechange") {
+      const diff = typeof payload.diff === "string" ? payload.diff.split("\n").filter(Boolean).length : 0;
+      lines.push(`Diff：${diff ? `${diff} 行` : "已更新"}`);
+    } else if (event.kind === "item/completed" && (type.toLowerCase() === "agentmessage" || typeof item.text === "string")) {
+      const text = typeof item.text === "string" ? item.text : "(訊息)";
+      lines.push(`Codex：${text.slice(0, 180)}`);
+    } else {
+      lines.push(`${event.seq}. ${event.kind}`);
+    }
+  }
+  return `\n最近事件：\n${lines.length ? lines.join("\n") : "(無)"}`;
+}
+
 function pathTail(cwd: string): string {
   const parts = cwd.split(/[\\/]+/).filter(Boolean);
   return parts.slice(-2).join("/") || cwd;

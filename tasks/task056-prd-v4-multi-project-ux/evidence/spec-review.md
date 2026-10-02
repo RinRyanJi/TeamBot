@@ -16,6 +16,6 @@ git diff --check
 rg -n "PRD-v4|user-cases-v4|Project.*Task.*Session.*Turn" README.md docs tasks
 ```
 
-`npm test` passed (177 tests) and `npm run typecheck` passed. The v4-specific suite is exposed as `npm run test:v4` and passed 44 tests, including coordinator routing, recovery, result folding and all 12 User Cases v4 fixtures.
+`npm test` passed (179 tests) and `npm run typecheck` passed. The v4-specific suite is exposed as `npm run test:v4` and passed 46 tests, including coordinator routing, recovery, result folding, task details, partial-completion status and all 12 User Cases v4 fixtures.
 
 The review is documentation-only. No live Teams message was sent and no task execution behavior was changed.

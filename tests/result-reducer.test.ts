@@ -42,7 +42,7 @@ test("formatResult is a two-tier summary and flags failed commands", () => {
       { kind: "command", command: "npm test", exitCode: 1 },
     ]),
   );
-  assert.match(s, /已完成 · 1 檔變更 · 1 指令/);
+  assert.match(s, /完成但需後續 · 1 檔變更 · 1 指令/);
   assert.match(s, /x\.ts \(\+5 −2\)/);
   assert.match(s, /失敗指令:npm test \(exit 1\)/);
 });

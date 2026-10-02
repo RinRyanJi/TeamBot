@@ -8,6 +8,8 @@ import type { CodexAdapter } from "../src/codex/adapter.ts";
 import type { TeamsMessage, TeamsTransport } from "../src/transports/teams/transport.ts";
 
 class StructuredAdapter extends EventEmitter {
+  private readonly failed: boolean;
+  constructor(failed = false) { super(); this.failed = failed; }
   async startThread(): Promise<{ threadId: string }> { return { threadId: "thread-results" }; }
   async startTurn(): Promise<{ turnId: string }> {
     setImmediate(() => {
@@ -15,7 +17,7 @@ class StructuredAdapter extends EventEmitter {
       this.emit("item/started", { threadId: "thread-results", turnId: "turn-results", item: { type: "commandExecution", command: "npm test" } });
       this.emit("item/completed", {
         threadId: "thread-results", turnId: "turn-results",
-        item: { type: "commandExecution", command: "npm test", exitCode: 0 },
+        item: { type: "commandExecution", command: "npm test", exitCode: this.failed ? 1 : 0 },
       });
       this.emit("item/completed", {
         threadId: "thread-results", turnId: "turn-results",
@@ -75,5 +77,29 @@ test("coordinator folds Codex items into the task result and changed-file card",
     "turn/started", "item/started", "item/completed", "item/completed", "item/completed", "turn/completed",
   ]);
   assert.match(transport.sent.join("\n"), /login fixed/);
+  assert.match(transport.sent.join("\n"), /Project：TeamBot · Task：T001 · 已完成/);
+  store.close();
+});
+
+test("failed command is surfaced as completed_with_followup", async () => {
+  const store = new Store();
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", name: "TeamBot", cwd: "D:/tb" });
+  const transport = new Transport();
+  const coord = new Coordinator({
+    store,
+    transport,
+    adapter: new StructuredAdapter(true) as unknown as CodexAdapter,
+    projects,
+    pairing,
+    now: () => 10,
+  });
+
+  const result = await coord.handle(message("m-results-failed"));
+  const job = store.getJob(result.jobId ?? "");
+  assert.ok(job);
+  assert.equal(job.status, "completed_with_followup");
+  assert.match(job.resultSummary ?? "", /完成但需後續/);
+  assert.match(transport.sent.join("\n"), /已完成但需後續/);
   store.close();
 });

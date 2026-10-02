@@ -62,7 +62,10 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
   private context: BrowserContext | null = null;
   private page: Page | null = null;
   private boundChatId = "";
-  private writeChain: Promise<unknown> = Promise.resolve();
+  // A single Electron-owned surface is shared by self-chat and groups. Reads,
+  // chat selection and writes must share one queue or a background poll can
+  // switch the surface while a reply is being typed.
+  private ioChain: Promise<unknown> = Promise.resolve();
   private cdpMode = false;
 
   constructor(opts: PlaywrightTeamsOptions) {
@@ -169,6 +172,10 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
   }
 
   async readMessages(): Promise<TeamsMessage[]> {
+    return this.enqueue(() => this.readMessagesDirect());
+  }
+
+  private async readMessagesDirect(): Promise<TeamsMessage[]> {
     const page = this.requirePage();
     const chatId = this.boundChatId;
     const raw = await page.$$eval(
@@ -194,6 +201,10 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
 
   /** Select a visible Teams conversation by its stable thread id. */
   async selectChat(chatId: string): Promise<void> {
+    return this.enqueue(() => this.selectChatDirect(chatId));
+  }
+
+  private async selectChatDirect(chatId: string): Promise<void> {
     const page = this.requirePage();
     if (this.boundChatId === chatId) return;
     const p = this.profile;
@@ -220,22 +231,26 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
   }
 
   async readMessagesFrom(chatId: string): Promise<TeamsMessage[]> {
-    await this.selectChat(chatId);
-    return this.readMessages();
+    return this.enqueue(async () => {
+      await this.selectChatDirect(chatId);
+      return this.readMessagesDirect();
+    });
   }
 
   sendMessage(text: string): Promise<string> {
-    const task = this.writeChain.then(() => this.doSend(text));
-    this.writeChain = task.catch(() => undefined);
-    return task;
+    return this.enqueue(() => this.doSend(text));
   }
 
   sendMessageTo(chatId: string, text: string): Promise<string> {
-    const task = this.writeChain.then(async () => {
-      await this.selectChat(chatId);
+    return this.enqueue(async () => {
+      await this.selectChatDirect(chatId);
       return this.doSend(text);
     });
-    this.writeChain = task.catch(() => undefined);
+  }
+
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const task = this.ioChain.then(operation);
+    this.ioChain = task.catch(() => undefined);
     return task;
   }
 
@@ -278,7 +293,7 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
   }
 
   async close(): Promise<void> {
-    await this.writeChain.catch(() => undefined);
+    await this.ioChain.catch(() => undefined);
     if (this.cdpMode) {
       // Only disconnect from the app-owned surface; do not close the Electron app.
       if (this.browser) await this.browser.close();

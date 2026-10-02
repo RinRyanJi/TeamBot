@@ -23,7 +23,7 @@ import { Store, type Pairing } from "../src/storage/store.ts";
 import { Coordinator } from "../src/app/coordinator.ts";
 import { ProjectRegistry, type ProjectDef } from "../src/app/projects.ts";
 import { bootRecovery, saveResidentThread } from "../src/supervisor/session.ts";
-import { reconcileOutbox } from "../src/supervisor/recovery.ts";
+import { reconcileOutbox, offlineGapNotice } from "../src/supervisor/recovery.ts";
 import { createBaseline } from "../src/app/desktop-logic.ts";
 
 const require = createRequire(import.meta.url);
@@ -96,6 +96,12 @@ async function main(): Promise<void> {
   const store = new Store(dbPath);
   const recovery = bootRecovery(store);
   if (recovery.interruptedJobs.length) log(`marked interrupted jobs: ${recovery.interruptedJobs.join(", ")}`);
+  // v4 exposes process-loss as an actionable reconciliation state. Keep the
+  // lower-level `interrupted` marker for compatibility with older stores, then
+  // promote it before any Teams recovery notice is sent.
+  for (const jobId of recovery.interruptedJobs) {
+    store.updateJobStatus(jobId, "needs_reconciliation", "Codex process was lost; confirm before continuing");
+  }
 
   const codex = new CodexAdapter();
   await codex.start();
@@ -147,6 +153,13 @@ async function main(): Promise<void> {
       log(`outbox ${chatId}: sent ${reconciled.sent}, uncertain ${reconciled.uncertain}`);
     }
   }
+  const heartbeatKey = "teamsHeartbeatAt";
+  const previousHeartbeat = Number(store.getSession(heartbeatKey) ?? "");
+  const heartbeatNow = Date.now();
+  if (Number.isFinite(previousHeartbeat) && previousHeartbeat > 0 && heartbeatNow > previousHeartbeat + 5_000) {
+    await transports.get(selfChatId)?.sendMessage(`[TB] ${offlineGapNotice(previousHeartbeat, heartbeatNow)}`).catch(() => undefined);
+  }
+  store.setSession(heartbeatKey, String(heartbeatNow), heartbeatNow);
   for (const jobId of recovery.interruptedJobs) {
     const job = store.getJob(jobId);
     const transport = job ? transports.get(job.chatId) : undefined;
@@ -198,6 +211,7 @@ async function main(): Promise<void> {
   const stop = async (): Promise<void> => {
     if (stopping) return;
     stopping = true;
+    store.setSession(heartbeatKey, String(Date.now()), Date.now());
     codex.stop();
     await adapter.close().catch(() => undefined);
     host.kill();
@@ -207,6 +221,7 @@ async function main(): Promise<void> {
   process.once("SIGTERM", () => { void stop().finally(() => process.exit(0)); });
 
   log(`ready; self chat ${selfChatId}; projects ${projectIds.join(", ")}; maxConcurrent ${maxConcurrent}`);
+  let lastHeartbeatWrite = Date.now();
   while (!stopping) {
     for (const [chatId, transport] of transports) {
       let messages;
@@ -218,6 +233,11 @@ async function main(): Promise<void> {
         chatSeen.add(message.messageId);
         void coordinator.handle({ ...message, tenant: process.env.TEAMBOT_TENANT ?? "teams", receivedAt: Date.now() }).catch((error: unknown) => log(`dispatch failed: ${error instanceof Error ? error.message : String(error)}`));
       }
+    }
+    if (Date.now() - lastHeartbeatWrite >= 15_000) {
+      const at = Date.now();
+      store.setSession(heartbeatKey, String(at), at);
+      lastHeartbeatWrite = at;
     }
     await sleep(1500);
   }

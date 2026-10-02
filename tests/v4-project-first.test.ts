@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ProjectRegistry } from "../src/app/projects.ts";
 import { ConversationContextStore, resolveProject } from "../src/app/context.ts";
-import { formatOverview, formatProjects } from "../src/app/overview.ts";
+import { formatOverview, formatProjects, formatTaskDetails } from "../src/app/overview.ts";
 import { parseV4Command } from "../src/router/v4-parser.ts";
 import { Store } from "../src/storage/store.ts";
 
@@ -80,4 +80,15 @@ test("project profiles normalize conversation bindings and preserve last-used me
   projects.markUsed("Bound", 42);
   assert.deepEqual(projects.get("Bound")?.conversationBindings, ["group-a"]);
   assert.equal(projects.get("Bound")?.lastUsedAt, 42);
+});
+
+test("task details fold commands, plans and diffs into a phone-sized summary", () => {
+  const details = formatTaskDetails([
+    { seq: 1, kind: "item/completed", payload: { item: { type: "commandExecution", command: "npm test", exitCode: 0 } } },
+    { seq: 2, kind: "turn/plan/updated", payload: { plan: [{ step: "test", completed: true }] } },
+    { seq: 3, kind: "turn/diff/updated", payload: { diff: "+++ b/src/login.ts\n+ok" } },
+  ]);
+  assert.match(details, /命令：npm test/);
+  assert.match(details, /計畫：1 個步驟/);
+  assert.match(details, /Diff：2 行/);
 });

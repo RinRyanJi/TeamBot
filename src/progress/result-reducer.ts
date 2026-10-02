@@ -67,7 +67,10 @@ export function reduceTurn(turnId: string, events: TurnEvent[]): TurnResult {
 
 /** Two-tier summary: a one-line verdict, then details. */
 export function formatResult(r: TurnResult): string {
-  const verdict = `已完成 · ${r.files.length} 檔變更 · ${r.commands.length} 指令`;
+  const failed = r.commands.filter((c) => c.exitCode !== 0 && c.exitCode !== null);
+  const verdict = failed.length
+    ? `完成但需後續 · ${r.files.length} 檔變更 · ${r.commands.length} 指令`
+    : `已完成 · ${r.files.length} 檔變更 · ${r.commands.length} 指令`;
   const lines: string[] = [verdict];
   if (r.finalText) lines.push(r.finalText);
   if (r.files.length) {
@@ -79,7 +82,6 @@ export function formatResult(r: TurnResult): string {
           .join("、"),
     );
   }
-  const failed = r.commands.filter((c) => c.exitCode !== 0 && c.exitCode !== null);
   if (failed.length) {
     lines.push("失敗指令:" + failed.map((c) => `${c.command} (exit ${c.exitCode})`).join("、"));
   }
