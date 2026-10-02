@@ -43,4 +43,8 @@ Follow-up read-only probe after selector hardening observed stable chat/message/
 for author-bearing rows; senderless system rows were counted and excluded. No message was
 sent, and the group/self-chat acceptance gates below remain pending.
 
+A fresh-database `run:v4` startup smoke also reached `RUNTIME_READY` against the
+authenticated app-owned Teams surface using the registered `TeamBot` profile. It did not
+send a message and proves startup/CDP wiring only; it does not replace the user-run gates.
+
 Status: PENDING USER-RUN

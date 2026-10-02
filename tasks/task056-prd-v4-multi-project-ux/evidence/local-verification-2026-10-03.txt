@@ -14,5 +14,6 @@ Commands and results:
 - `npm run harness:teams:v4` — exit 0; printed the UC-01 through UC-12 live checklist and sent no Teams messages.
 - `git diff --check` — exit 0.
 - Targeted Teams adapter tests also cover rejection of `announcing-region-message-list`, the `data-person-mri` fallback, and filtering senderless rows; the Phase 0 harness syntax check passes.
+- Fresh-database `run:v4` smoke reached `RUNTIME_READY` using a registered project profile and the authenticated app-owned Teams surface; no message was sent.
 
 Scope note: these are local fixture, storage, coordinator, Electron and app-server checks. Real Teams tenant, phone push and group-chat behavior remain the explicit user-run gate in task060; no live account messages, cookies or screenshots are included in Git.
