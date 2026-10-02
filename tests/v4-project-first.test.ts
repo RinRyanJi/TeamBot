@@ -61,6 +61,8 @@ test("overview groups jobs by project and limits noise", () => {
   const text = formatOverview(store.listJobs(), registry(), 8);
   assert.match(text, /Web \(Alpha\).*1 進行中/s);
   assert.match(text, /API \(Beta\).*1 已完成/s);
+  store.createJob({ jobId: "T003", chatId: "self", senderId: "me", projectId: "Alpha", cwd: "D:/work/alpha", status: "completed_with_followup", createdAt: 3 });
+  assert.match(formatOverview(store.listJobs(), registry()), /需後續/);
   store.setConversationContext("self", "Beta", 5);
   assert.equal(store.getConversationContext("self").activeProjectId, "Beta");
   store.close();

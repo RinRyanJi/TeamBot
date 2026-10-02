@@ -7,6 +7,7 @@ export interface ProjectOverview {
   active: number;
   queued: number;
   completed: number;
+  followup: number;
   failed: number;
   jobs: Job[];
 }
@@ -23,6 +24,7 @@ export function buildOverview(jobs: Job[], projects: ProjectRegistry, allowedPro
       active: projectJobs.filter((j) => ACTIVE.has(j.status)).length,
       queued: projectJobs.filter((j) => j.status === "queued").length,
       completed: projectJobs.filter((j) => j.status === "completed").length,
+      followup: projectJobs.filter((j) => j.status === "completed_with_followup").length,
       failed: projectJobs.filter((j) => ["failed", "cancelled", "killed"].includes(j.status)).length,
       jobs: projectJobs.sort((a, b) => b.createdAt - a.createdAt),
     };
@@ -40,7 +42,7 @@ export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs =
       lines.push(`• ${label}：目前沒有任務`);
       continue;
     }
-    lines.push(`• ${label}：${group.active} 進行中、${group.completed} 已完成、${group.failed} 失敗/取消`);
+    lines.push(`• ${label}：${group.active} 進行中、${group.completed} 已完成、${group.followup} 需後續、${group.failed} 失敗/取消`);
     for (const job of group.jobs.slice(0, remaining)) {
       const mode = job.executionMode === "worktree" ? ` · worktree/${job.jobId}` : "";
       const queue = job.queuePosition ? ` · queue #${job.queuePosition}${job.queueReason ? ` (${job.queueReason})` : ""}` : "";
