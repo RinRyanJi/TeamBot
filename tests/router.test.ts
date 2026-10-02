@@ -112,6 +112,18 @@ test("acting on an unknown job is refused", () => {
   assert.deepEqual(d, { allow: false, reason: "unknown-job" });
 });
 
+test("group viewers cannot hard-kill Codex; operator can", () => {
+  const kill = cmd("!tb kill");
+  assert.deepEqual(
+    authorize(kill, ctx({ senderId: "bob", pairing: { ...groupPairing, roles: { bob: "viewer" } } })),
+    { allow: false, reason: "not-initiator" },
+  );
+  assert.deepEqual(
+    authorize(kill, ctx({ senderId: "bob", pairing: { ...groupPairing, roles: { bob: "operator" } } })),
+    { allow: true },
+  );
+});
+
 test("display-name spoof cannot gain permission (identity is sender id)", () => {
   // Two users share the display name "Alice" but have different ids. The impostor's
   // stable id is not in the allowlist, so authorization fails regardless of name.

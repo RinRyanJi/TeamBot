@@ -59,7 +59,16 @@ export function authorize(command: Command, ctx: RouteContext): AuthDecision {
       return { allow: true };
 
     // Session/security control — allowlisted sender (owner) only; already gated above.
-    case "kill":
+    case "kill": {
+      // A group viewer must never be able to terminate every Codex process in
+      // the conversation. Explicit owner/operator roles are required; admins
+      // remain allowed through the desktop-configured admin list.
+      if (ctx.pairing.kind === "group" && !isAdmin(ctx)) {
+        const role = ctx.pairing.roles?.[ctx.senderId] ?? "viewer";
+        if (role === "viewer") return { allow: false, reason: "not-initiator" };
+      }
+      return { allow: true };
+    }
     case "lock":
     case "unlock":
       return { allow: true };

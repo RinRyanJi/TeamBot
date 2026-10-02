@@ -303,7 +303,10 @@ export class Coordinator {
         }
         this.adapter.stop();
         const affected = this.store.listJobs().filter((job) => ["starting", "running", "waiting_input", "waiting_approval", "stopping"].includes(job.status) && (!cmd.jobId || job.jobId === cmd.jobId));
-        for (const job of affected) this.store.updateJobStatus(job.jobId, "unknown", "Codex process was killed; reconciliation required");
+        for (const job of affected) {
+          this.store.updateJobMetadata(job.jobId, { executionStatus: "execution_unknown" });
+          this.store.updateJobStatus(job.jobId, "needs_reconciliation", "Codex process was killed; reconciliation required");
+        }
         await this.reply("sys", affected.length ? `已硬停止 Codex；${affected.map((job) => job.jobId).join(", ")} 需要重新核對。` : "目前沒有執行中的 Codex 工作。", msg.chatId);
         return { action: "killed" };
       }

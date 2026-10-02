@@ -22,6 +22,11 @@ class ApprovalAdapter extends EventEmitter {
   respond(id: number, result: unknown): void { this.responses.push({ id, result }); }
 }
 
+class KillAdapter extends ApprovalAdapter {
+  stopped = false;
+  stop(): void { this.stopped = true; }
+}
+
 const msg = (id: string, senderId: string, text: string, chatId = "group"): InboxMessage => ({ tenant: "t", chatId, messageId: id, senderId, text, receivedAt: 10 });
 
 test("group overview is summary-only and viewer cannot dispatch work", async () => {
@@ -65,6 +70,26 @@ test("group task and diff views stay summary-only", async () => {
   await coord.handle(msg("diff-summary", "viewer", "!tb diff T001"));
   assert.match(transport.sent.at(-1) ?? "", /完整內容請由發起人/);
   assert.doesNotMatch(transport.sent.at(-1) ?? "", /PRIVATE output/);
+  store.close();
+});
+
+test("group viewer cannot hard-kill Codex and operator leaves reconciliation state", async () => {
+  const store = new Store();
+  store.createJob({ jobId: "T-KILL", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", threadId: "th-kill", activeTurnId: "turn-kill", status: "running", createdAt: 1 });
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", cwd: "D:/tb" });
+  const pairing: Pairing = { id: "g", tenant: "t", account: "owner", chatId: "group", kind: "group", allowlist: ["operator", "viewer"], roles: { operator: "operator", viewer: "viewer" }, projects: ["TeamBot"], createdAt: 1 };
+  const transport = new Transport("group");
+  const adapter = new KillAdapter();
+  const coord = new Coordinator({ store, transport, adapter: adapter as unknown as CodexAdapter, projects, pairing, now: () => 10 });
+  const denied = await coord.handle(msg("kill-viewer", "viewer", "!tb kill"));
+  assert.equal(denied.action, "denied:not-initiator");
+  assert.equal(store.getJob("T-KILL")?.status, "running");
+  const killed = await coord.handle(msg("kill-operator", "operator", "!tb kill"));
+  assert.equal(killed.action, "killed");
+  assert.equal(adapter.stopped, true);
+  assert.equal(store.getJob("T-KILL")?.status, "needs_reconciliation");
+  assert.equal(store.getJob("T-KILL")?.executionStatus, "execution_unknown");
   store.close();
 });
 
