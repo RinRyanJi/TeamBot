@@ -20,6 +20,49 @@ import { MultiTaskScheduler } from "../supervisor/worktrees.ts";
 import { ApprovalManager } from "../router/approvals.ts";
 import { isDangerousScope, approvalTarget } from "../router/approval-routing.ts";
 import { redactString } from "../util/redact.ts";
+import { reduceTurn, formatResult, type TurnEvent, type FileChange } from "../progress/result-reducer.ts";
+
+function recordOf(value: unknown): Record<string, unknown> {
+  return value != null && typeof value === "object" ? value as Record<string, unknown> : {};
+}
+
+function stringField(value: unknown, ...keys: string[]): string | undefined {
+  const rec = recordOf(value);
+  for (const key of keys) if (typeof rec[key] === "string" && rec[key].trim()) return rec[key] as string;
+  return undefined;
+}
+
+function nestedItem(payload: unknown): Record<string, unknown> {
+  const rec = recordOf(payload);
+  return recordOf(rec.item ?? payload);
+}
+
+function eventBelongs(payload: unknown, threadId: string, turnId: string): boolean {
+  const rec = recordOf(payload);
+  const eventThread = stringField(rec, "threadId") ?? stringField(rec.thread, "id");
+  const eventTurn = stringField(rec, "turnId") ?? stringField(rec.turn, "id");
+  if (eventThread && eventThread !== threadId) return false;
+  if (eventTurn && turnId && eventTurn !== turnId) return false;
+  return true;
+}
+
+function changeFiles(item: Record<string, unknown>): FileChange[] {
+  const paths: FileChange[] = [];
+  const add = (value: unknown): void => {
+    const rec = recordOf(value);
+    const path = stringField(rec, "path", "filePath", "relativePath");
+    if (!path) return;
+    paths.push({
+      path,
+      added: typeof rec.added === "number" ? rec.added : typeof rec.addedLines === "number" ? rec.addedLines : 0,
+      removed: typeof rec.removed === "number" ? rec.removed : typeof rec.removedLines === "number" ? rec.removedLines : 0,
+    });
+  };
+  add(item);
+  const changes = item.changes;
+  if (Array.isArray(changes)) for (const change of changes) add(change);
+  return paths;
+}
 
 export interface CoordinatorOptions {
   store: Store;
@@ -206,7 +249,7 @@ export class Coordinator {
           return { action: "answer:denied" };
         }
         const job = this.store.getJob(input.jobId);
-        const role = this.pairing.roles?.[msg.senderId] ?? "operator";
+        const role = this.pairing.roles?.[msg.senderId] ?? "viewer";
         const canAnswer = !!job && (this.admins.includes(msg.senderId) || job.senderId === msg.senderId || (this.pairing.kind === "group" && (role === "owner" || role === "operator")));
         if (!job || !canAnswer) {
           await this.reply("sys", "只有工作發起人或群組 operator 可以回答這個問題。", msg.chatId);
@@ -250,7 +293,7 @@ export class Coordinator {
   ): Promise<HandleResult> {
     const role = this.pairing.kind === "self"
       ? "owner"
-      : (this.pairing.roles?.[msg.senderId] ?? "operator");
+      : (this.pairing.roles?.[msg.senderId] ?? "viewer");
     const mutating = ["run", "add", "fork", "cancel", "stop", "steer", "handoff", "rename"].includes(command.kind);
     if (mutating && role === "viewer") {
       await this.reply("sys", "群組檢視者只能查看摘要；請由 operator/owner 執行此操作。", msg.chatId);
@@ -567,8 +610,12 @@ export class Coordinator {
     const request = payload as { id?: number; method?: string; params?: Record<string, unknown> };
     if (typeof request.id !== "number") return;
     const threadId = typeof request.params?.threadId === "string" ? request.params.threadId : undefined;
-    const job = this.store.listJobs().find((candidate) => candidate.threadId === threadId)
-      ?? this.store.listJobs().find((candidate) => ["starting", "running"].includes(candidate.status));
+    // A request without a known thread must be rejected. Falling back to an
+    // arbitrary active job would let concurrent projects receive each other's
+    // approval or input request.
+    const job = threadId
+      ? this.store.listJobs().find((candidate) => candidate.threadId === threadId)
+      : undefined;
     if (!job) {
       this.adapter.respond(request.id, { accept: false });
       return;
@@ -598,9 +645,19 @@ export class Coordinator {
     });
     this.store.updateJobStatus(job.jobId, "waiting_approval");
     this.store.updateJobMetadata(job.jobId, { pendingDecision: code });
+    const project = this.projects.get(job.projectId);
+    const details = [
+      `Project：${project?.name ?? job.projectId}`,
+      `Task：${job.jobId}`,
+      `Turn：${job.activeTurnId ?? "尚未建立"}`,
+      `cwd：${job.worktreePath ?? job.cwd}`,
+      `動作：${request.method ?? "request"}`,
+      `影響範圍：${scope || "(未提供)"}`,
+      `失效時間：${new Date(this.store.getApproval(code)?.expiresAt ?? this.now()).toISOString()}`,
+    ].join("\n");
     const body = dangerous && target !== job.chatId
       ? `工作 ${job.jobId} 等待發起人於私人聊天處理批准 ${code}。`
-      : `工作 ${job.jobId} 需要批准 ${code}：${scope}`;
+      : `工作 ${job.jobId} 需要批准 ${code}：\n${details}`;
     await this.reply(job.jobId, body, target);
   }
 
@@ -699,50 +756,149 @@ export class Coordinator {
 
     let lastItemText = "";
     let expectedTurnId = "";
+    // The initial turn/started record above uses sequence 1.
+    let eventSeq = 2;
+    let turnStartedRecorded = true;
+    const turnEvents: TurnEvent[] = [];
+    let onTurn = (_p: unknown): void => undefined;
+    const appendEvent = (kind: string, payload: unknown): void => {
+      this.store.appendEvent(jobId, eventSeq++, kind, payload, this.now());
+    };
+    const cleanup = (): void => {
+      this.adapter.off("turn/started", onTurnStarted);
+      this.adapter.off("item/started", onItemStarted);
+      this.adapter.off("item/completed", onItem);
+      this.adapter.off("item/commandExecution/outputDelta", onCommandOutput);
+      this.adapter.off("turn/plan/updated", onPlan);
+      this.adapter.off("turn/diff/updated", onDiff);
+      this.adapter.off("thread/tokenUsage/updated", onTokens);
+      this.adapter.off("turn/completed", onTurn);
+    };
+    const onTurnStarted = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      const turn = stringField(recordOf(p).turn, "id") ?? stringField(p, "turnId");
+      if (turn && !expectedTurnId) expectedTurnId = turn;
+      this.store.updateJobMetadata(jobId, { currentStep: "執行中" });
+      if (!turnStartedRecorded) {
+        appendEvent("turn/started", p);
+        turnStartedRecorded = true;
+      }
+    };
+    const onItemStarted = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      const item = nestedItem(p);
+      const step = stringField(item, "type", "title", "name");
+      if (step) this.store.updateJobMetadata(jobId, { currentStep: step });
+      appendEvent("item/started", p);
+    };
     const onItem = (p: unknown): void => {
-      const params = p as { threadId?: string; turnId?: string; text?: string };
-      if (params.threadId && params.threadId !== thread.threadId) return;
-      if (params.turnId && expectedTurnId && params.turnId !== expectedTurnId) return;
-      const text = params.text;
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      const item = nestedItem(p);
+      const text = stringField(item, "text") ?? stringField(p, "text");
       if (text) lastItemText = text;
+      const type = stringField(item, "type")?.toLowerCase();
+      if (type === "agentmessage" || text) {
+        const phase = (stringField(item, "phase") ?? "").toLowerCase();
+        turnEvents.push({ kind: "agentMessage", phase: phase.includes("final") ? "final_answer" : "commentary", text: text ?? "" });
+      }
+      if (type === "commandexecution") {
+        turnEvents.push({ kind: "command", command: stringField(item, "command") ?? "(command)", exitCode: typeof item.exitCode === "number" ? item.exitCode : null });
+      }
+      const files = changeFiles(item);
+      if (type === "filechange" || files.length) {
+        for (const file of files) turnEvents.push({ kind: "fileChange", ...file });
+        if (files.length) this.store.updateJobMetadata(jobId, { changedFiles: files.map((file) => file.path) });
+      }
+      appendEvent("item/completed", p);
+    };
+    const onCommandOutput = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      const line = stringField(p, "delta", "chunk", "text");
+      if (line) {
+        this.store.updateJobMetadata(jobId, { currentStep: `執行命令：${redactString(line).slice(0, 120)}` });
+        appendEvent("command/output", { text: redactString(line).slice(0, 400) });
+      }
+    };
+    const onPlan = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      const plan = recordOf(p).plan;
+      if (Array.isArray(plan)) {
+        const firstOpen = plan.find((item) => !recordOf(item).completed && !recordOf(item).done);
+        const step = firstOpen ? stringField(firstOpen, "step", "text", "title") : undefined;
+        if (step) this.store.updateJobMetadata(jobId, { currentStep: step });
+      }
+      appendEvent("turn/plan/updated", p);
+    };
+    const onDiff = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      const diff = stringField(p, "diff");
+      if (diff) {
+        const files = [...diff.matchAll(/^\+\+\+ b\/(.+)$/gm)].map((match) => ({ path: match[1]!, added: 0, removed: 0 }));
+        if (files.length) turnEvents.push({ kind: "diff", files });
+        if (files.length) this.store.updateJobMetadata(jobId, { changedFiles: files.map((file) => file.path) });
+      }
+      appendEvent("turn/diff/updated", p);
+    };
+    const onTokens = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      appendEvent("thread/tokenUsage/updated", p);
     };
     const completed = new Promise<void>((resolve) => {
-      const onTurn = (p: unknown): void => {
-        const params = p as { threadId?: string; turnId?: string };
-        if (params.threadId && params.threadId !== thread.threadId) return;
-        if (expectedTurnId && params.turnId && params.turnId !== expectedTurnId) return;
-        this.adapter.off("item/completed", onItem);
-        this.adapter.off("turn/completed", onTurn);
+      onTurn = (p: unknown): void => {
+        if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+        cleanup();
         resolve();
       };
+      this.adapter.on("turn/started", onTurnStarted);
+      this.adapter.on("item/started", onItemStarted);
       this.adapter.on("item/completed", onItem);
+      this.adapter.on("item/commandExecution/outputDelta", onCommandOutput);
+      this.adapter.on("turn/plan/updated", onPlan);
+      this.adapter.on("turn/diff/updated", onDiff);
+      this.adapter.on("thread/tokenUsage/updated", onTokens);
       this.adapter.on("turn/completed", onTurn);
     });
 
-    const turn = (await this.adapter.startTurn({ threadId: thread.threadId, input: request })) as { turnId?: string };
-    expectedTurnId = turn.turnId ?? "";
+    let turn: { turnId?: string };
+    try {
+      turn = await this.adapter.startTurn({ threadId: thread.threadId, input: request }) as { turnId?: string };
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
+    expectedTurnId = turn.turnId ?? expectedTurnId;
     if (turn.turnId) this.store.setJobThread(jobId, thread.threadId, turn.turnId);
     await completed;
 
-    this.store.appendEvent(jobId, 2, "turn/completed", null, this.now());
+    appendEvent("turn/completed", null);
+    const result = reduceTurn(turn.turnId ?? jobId, turnEvents);
+    const finalText = result.finalText || lastItemText;
+    const summary = formatResult(result);
+    const safeFinalText = redactString(finalText);
+    const safeSummary = redactString(summary);
     const wasCancelled = this.cancelled.delete(jobId);
     const job = this.store.getJob(jobId);
     const worktree = job?.executionMode === "worktree";
     const finalStatus = wasCancelled ? "cancelled" : worktree ? "merge-pending" : "completed";
-    this.store.updateJobStatus(jobId, finalStatus, lastItemText);
-    this.store.updateJobMetadata(jobId, { resultSummary: lastItemText || null, pendingDecision: null });
-    await this.reply(jobId, `${wasCancelled ? "已取消" : worktree ? "已完成，待合併" : "已完成"}；結果：${lastItemText || "(無輸出)"}`, msg.chatId);
+    this.store.updateJobStatus(jobId, finalStatus, safeFinalText || undefined);
+    this.store.updateJobMetadata(jobId, {
+      resultSummary: safeSummary || safeFinalText || null,
+      changedFiles: result.files.map((file) => file.path),
+      pendingDecision: null,
+    });
+    await this.reply(jobId, `${wasCancelled ? "已取消" : worktree ? "已完成，待合併" : "已完成"}；\n${safeSummary || `結果：${safeFinalText || "(無輸出)"}`}`, msg.chatId);
     return { action: "ran", jobId };
   }
 
   /** Enqueue a labelled reply to the source conversation and flush the outbox. */
   private async reply(jobId: string, body: string, chatId = this.transport.chatId()): Promise<void> {
     this.seq += 1;
+    const safeBody = redactString(body);
     this.outbox.enqueueMessage(
       jobId,
       chatId,
       this.seq,
-      body,
+      safeBody,
       this.now(),
     );
     for (const row of this.outbox.pending(chatId)) {

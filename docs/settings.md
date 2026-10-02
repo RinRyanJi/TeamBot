@@ -43,6 +43,7 @@ app-owned surface，再把 self-chat 與選定群組交給 project-first Coordin
 
 ```powershell
 $env:TEAMBOT_SELF_SENDER_ID = "<Teams sender id>"
+$env:TEAMBOT_SELF_CHAT_ID = "<self-chat thread id>"
 $env:TEAMBOT_PROJECTS_JSON = '[{"projectId":"TeamBot","cwd":"D:\\workspace\\GitBank\\GitRin\\TeamBot","aliases":["tb"]}]'
 $env:TEAMBOT_GROUP_CHAT_IDS = "<optional-group-thread-id>"
 npm run run:v4
@@ -51,3 +52,7 @@ npm run run:v4
 必要的實際 Teams 驗證請使用 disposable self-chat/group；不要把 token、cookie、聊天匯出
 或截圖放進 Git。`TEAMBOT_GROUP_ROLES_JSON` 可用 `{ "<group-id>": { "<sender-id>": "owner" } }`
 指定 owner/operator/viewer。
+群組成員的穩定 sender ID 需列在 `TEAMBOT_ALLOWED_SENDERS`；未列入角色表的 allowlisted 成員預設為 viewer。
+
+設定群組時必須同時提供 `TEAMBOT_SELF_CHAT_ID`，避免把批准或私人回報誤送到
+第一個可見聊天；只有 self-chat 時才可省略，runner 會使用目前已開啟的對話。

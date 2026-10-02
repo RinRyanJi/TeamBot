@@ -2,25 +2,25 @@
 
 > 產品規格已更新至 [PRD v4](PRD-v4.md)；本文件的早期 Phase 0–3 描述保留作為歷史基線。多專案 Project-first、overview、active context 和 lane/worktree UX 以 v4 與 task056–060 為準。
 
-目前狀態：**實作中,並已端到端跑通**。任務拆解於 `tasks/`(`tasks/README.md`),逐 task 附真實證據、個別 commit/push。原始 Phase 0–3 為早期規劃;實際落地情形與新產品方向見下方「Phase R — 常駐助理」。
+目前狀態：**v4 實作中，所有可在本機重現的 User Cases 已通過；真實 Teams 群組／手機證據仍由 task060 的 user-run harness 收集**。任務拆解於 `tasks/`（`tasks/README.md`），逐 task 附證據、個別 commit/push。原始 Phase 0–3 與 resident runner 是歷史基線；現行產品方向以 PRD v4 與 task056–060 為準。
 
-## Phase R — 常駐助理(現行產品方向)
+## Phase R — 常駐助理（歷史基線）
 
-由 brainstorm 收斂(見 `docs/product-brainstorm.md`)。核心:**單一常駐 Codex 工作階段**執行於 `D:\AgentHub`,經 Teams(CDP 接自有 WebContentsView)接收 `!tb`/`@tb` 指令,在**同一 thread 接續每一輪**(對話連續),持續回報並在需要時請求決策。
+由早期 brainstorm 收斂（見 `docs/product-brainstorm.md`）。核心是單一常駐 Codex 工作階段與單一 thread；它保留作為回歸基線，不再代表 v4 的產品心智模型。v4 以 Project → Task → Session → Turn 管理多專案，每項 task 綁定自己的 Codex thread，self-chat 與選定群組透過同一個本機 supervisor 受來源對話與角色限制。
 
-**已完成並實測(live 於真實租戶):**
+**早期基線證據:**
 - Phase 0 可行性 = GO:登入、穩定 chatId/messageId/senderId、送出、接收、隱藏背景收訊(task018)。
 - 傳輸:Playwright 經 **CDP 連自有 Teams 表面**(task019);真實選擇器接進正式 adapter(task010 teams profile)。
 - 常駐 session + `!tb`/`@tb` + 全形容錯 + 自然語言預設 AgentHub(task020、e2e runner)。
 - 安全預設(路線圖 A,task021):預設 read-only、`unlock/lock/kill`、寫入限 AgentHub + 拒網路、危險操作分類、對外去識別。
 
-**待實作路線圖(B–G,已立為 task,逐項驗證):**
-- B 結果彙整器:turn fold → `final_answer` 擷取 + 檔案變更清單;outbox `(turnId,kind)` 唯一鍵 + Teams 編輯冪等。
-- C 狀態卡 + coalescer 接線:就地編輯單卡、plan/輸出 tail/token、心跳、`status` 讀快照。
-- D 批准註冊表:code↔requestId、多待決、逾時暫停、`requestUserInput` 答覆、`steer` 轉向。
-- E 事件化收件:Teams DOM `MutationObserver` 推送取代輪詢 + 單調游標去重。
-- F 連續性/復原:`thread/resume`、開機重播 approvals/outbox/in-flight。
-- G 多任務(選用):額外 thread + git worktree 隔離。
+**早期 B–G 路線圖的能力已拆入 v4 實作與測試；目前追蹤方式以 task056–060 和 PRD v4 的驗收矩陣為準。**
+- B 結果彙整器：v4 Coordinator 已把 Codex item、command、file-change、diff 與 final answer 折疊為 task 事件與結果摘要。
+- C 狀態與通知：狀態模型、佇列與 `watch`/`mute` 已有本機驗證；Teams 就地編輯仍不宣稱已驗證。
+- D 決策：批准／輸入／steer／stop 綁定 task、thread、turn、request、chat 與 sender。
+- E 收件：Playwright adapter 支援 MutationObserver fixture；v4 production runner 目前以可核對的 chat polling 作為退路。
+- F 連續性／復原：v4 runner 啟動時嘗試 `thread/resume`、reconcile outbox，並將中斷工作告知為不自動重跑。
+- G 多任務：不同 Project 可並行，同 Project 需 lane 或明確 worktree。
 
 三大互動場景(回報/狀態/決策)的設計細節見 `docs/product-brainstorm.md`。
 

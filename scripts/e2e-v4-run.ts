@@ -9,8 +9,8 @@
 //   node --experimental-strip-types --experimental-sqlite scripts/e2e-v4-run.ts
 //
 // Optional: TEAMBOT_GROUP_CHAT_IDS, TEAMBOT_ALLOWED_SENDERS,
-// TEAMBOT_PRIVATE_APPROVAL_CHAT_ID, TEAMBOT_MAX_CONCURRENT, TEAMBOT_DB,
-// TEAMBOT_TEAMS_URL, TEAMBOT_TEAMS_PORT.
+// TEAMBOT_MAX_CONCURRENT, TEAMBOT_DB,
+// TEAMBOT_TEAMS_URL, TEAMBOT_TEAMS_PORT, TEAMBOT_SELF_CHAT_ID (required with groups).
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, normalize } from "node:path";
@@ -22,7 +22,8 @@ import { CodexAdapter } from "../src/codex/adapter.ts";
 import { Store, type Pairing } from "../src/storage/store.ts";
 import { Coordinator } from "../src/app/coordinator.ts";
 import { ProjectRegistry, type ProjectDef } from "../src/app/projects.ts";
-import { bootRecovery } from "../src/supervisor/session.ts";
+import { bootRecovery, saveResidentThread } from "../src/supervisor/session.ts";
+import { reconcileOutbox } from "../src/supervisor/recovery.ts";
 import { createBaseline } from "../src/app/desktop-logic.ts";
 
 const require = createRequire(import.meta.url);
@@ -82,6 +83,10 @@ async function main(): Promise<void> {
   if (!selfSender) throw new Error("TEAMBOT_SELF_SENDER_ID is required for allowlisted self-chat control");
   const allowedSenders = [...new Set([selfSender, ...envList("TEAMBOT_ALLOWED_SENDERS")])];
   const groupIds = envList("TEAMBOT_GROUP_CHAT_IDS");
+  const configuredSelfChatId = process.env.TEAMBOT_SELF_CHAT_ID?.trim();
+  if (groupIds.length > 0 && !configuredSelfChatId) {
+    throw new Error("TEAMBOT_SELF_CHAT_ID is required when group chats are configured; never infer the private approval chat");
+  }
   const maxConcurrent = Math.max(1, Number(process.env.TEAMBOT_MAX_CONCURRENT ?? "1"));
 
   const projects = new ProjectRegistry();
@@ -94,11 +99,22 @@ async function main(): Promise<void> {
 
   const codex = new CodexAdapter();
   await codex.start();
+  if (recovery.resume.mode === "resume" && recovery.resume.threadId) {
+    try {
+      const resumed = await codex.resumeThread({ threadId: recovery.resume.threadId }) as { thread?: { id?: string }; threadId?: string };
+      const resumedId = resumed.thread?.id ?? resumed.threadId ?? recovery.resume.threadId;
+      saveResidentThread(store, resumedId, Date.now());
+      log(`resumed Codex thread ${resumedId}`);
+    } catch (error) {
+      log(`resident thread resume unavailable; no automatic rerun: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   const host = spawn(electronPath, [hostCjs, "--show", "--port", port, "--url", teamsUrl], { stdio: ["ignore", "pipe", "pipe"] });
   await waitForHost(host);
   const adapter = new PlaywrightTeamsAdapter({ url: "", profile: "teams", headless: false });
   await adapter.connectCDP(`http://127.0.0.1:${port}`);
-  const selfChatId = adapter.chatId();
+  if (configuredSelfChatId) await adapter.selectChat(configuredSelfChatId);
+  const selfChatId = configuredSelfChatId ?? adapter.chatId();
   if (!selfChatId) throw new Error("Teams surface did not expose a stable self-chat id");
   const configuredChatIds = [selfChatId, ...groupIds.filter((id) => id !== selfChatId)];
   const transports = new Map(configuredChatIds.map((chatId) => [chatId, new ScopedTeamsTransport(adapter, chatId)]));
@@ -125,6 +141,31 @@ async function main(): Promise<void> {
     pairings.set(chatId, pairing);
     store.upsertPairing(pairing);
   }
+  for (const [chatId, transport] of transports) {
+    const reconciled = await reconcileOutbox(store, transport, () => Date.now());
+    if (reconciled.sent || reconciled.uncertain) {
+      log(`outbox ${chatId}: sent ${reconciled.sent}, uncertain ${reconciled.uncertain}`);
+    }
+  }
+  for (const jobId of recovery.interruptedJobs) {
+    const job = store.getJob(jobId);
+    const transport = job ? transports.get(job.chatId) : undefined;
+    if (!job || !transport) continue;
+    await transport.sendMessage(`[TB ${job.jobId}] 工作在 runtime 重啟後中斷；狀態需要重新核對，不會自動重跑。`)
+      .catch(() => undefined);
+  }
+  for (const approval of recovery.pendingApprovals) {
+    const job = store.getJob(approval.jobId);
+    const transport = transports.get(approval.chatId);
+    if (!job || !transport || approval.expiresAt <= Date.now()) continue;
+    await transport.sendMessage([
+      `[TB ${job.jobId}] 尚有待處理批准 ${approval.code}`,
+      `Project：${job.projectId} · Turn：${approval.turnId ?? "尚未建立"}`,
+      `範圍：${approval.scope ?? "(未提供)"}`,
+      `失效時間：${new Date(approval.expiresAt).toISOString()}`,
+      `回覆：ok ${approval.code} 或 no ${approval.code}`,
+    ].join("\n")).catch(() => undefined);
+  }
   const coordinators = new Map<string, Coordinator>();
   for (const [chatId, pairing] of pairings) {
     coordinators.set(chatId, new Coordinator({
@@ -135,6 +176,7 @@ async function main(): Promise<void> {
       pairing,
       maxConcurrent,
       privateApprovalChatId: selfChatId,
+      now: () => Date.now(),
       listenServerRequests: false,
     }));
   }
@@ -146,7 +188,7 @@ async function main(): Promise<void> {
     const request = payload as { params?: { threadId?: string } };
     const threadId = request.params?.threadId;
     const job = store.listJobs().find((candidate) => candidate.threadId === threadId);
-    const coordinator = job ? coordinators.get(job.chatId) : coordinators.get(selfChatId);
+    const coordinator = job ? coordinators.get(job.chatId) : undefined;
     if (coordinator) void coordinator.handleServerRequest(payload);
   });
 

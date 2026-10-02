@@ -64,10 +64,31 @@ test("approval server request is persisted, surfaced, and resolved once", async 
   const approval = store.listPendingApprovals()[0];
   assert.ok(approval);
   assert.match(transport.sent.join("\n"), new RegExp(approval.code));
+  assert.match(transport.sent.join("\n"), /Project：TeamBot/);
+  assert.match(transport.sent.join("\n"), /Task：T-A/);
+  assert.match(transport.sent.join("\n"), /Turn：tu/);
+  assert.match(transport.sent.join("\n"), /cwd：D:\/tb/);
+  assert.match(transport.sent.join("\n"), /失效時間：/);
   const result = await coord.handle(msg("approval", "me", `!tb approve ${approval.code}`, "self"));
   assert.equal(result.action, "approve");
   assert.deepEqual(adapter.responses[0], { id: 7, result: { accept: true } });
   assert.equal(store.getApproval(approval.code)?.status, "approved");
+  store.close();
+});
+
+test("unknown Codex thread is rejected instead of guessed across projects", async () => {
+  const store = new Store();
+  store.createJob({ jobId: "T-KNOWN", chatId: "self", senderId: "me", projectId: "TeamBot", cwd: "D:/tb", threadId: "known", status: "running", createdAt: 1 });
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", cwd: "D:/tb" });
+  const pairing: Pairing = { id: "p", tenant: "t", account: "me", chatId: "self", kind: "self", allowlist: ["me"], projects: ["TeamBot"], createdAt: 1 };
+  const transport = new Transport("self");
+  const adapter = new ApprovalAdapter();
+  new Coordinator({ store, transport, adapter: adapter as unknown as CodexAdapter, projects, pairing, now: () => 10 });
+  adapter.emit("serverRequest", { id: 77, method: "item/commandExecution/requestApproval", params: { threadId: "unknown", command: "rm -rf build" } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(store.listPendingApprovals().length, 0);
+  assert.deepEqual(adapter.responses, [{ id: 77, result: { accept: false } }]);
   store.close();
 });
 

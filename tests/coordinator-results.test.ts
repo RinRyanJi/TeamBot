@@ -1,0 +1,79 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { Store, type InboxMessage, type Pairing } from "../src/storage/store.ts";
+import { Coordinator } from "../src/app/coordinator.ts";
+import { ProjectRegistry } from "../src/app/projects.ts";
+import type { CodexAdapter } from "../src/codex/adapter.ts";
+import type { TeamsMessage, TeamsTransport } from "../src/transports/teams/transport.ts";
+
+class StructuredAdapter extends EventEmitter {
+  async startThread(): Promise<{ threadId: string }> { return { threadId: "thread-results" }; }
+  async startTurn(): Promise<{ turnId: string }> {
+    setImmediate(() => {
+      this.emit("turn/started", { threadId: "thread-results", turnId: "turn-results" });
+      this.emit("item/started", { threadId: "thread-results", turnId: "turn-results", item: { type: "commandExecution", command: "npm test" } });
+      this.emit("item/completed", {
+        threadId: "thread-results", turnId: "turn-results",
+        item: { type: "commandExecution", command: "npm test", exitCode: 0 },
+      });
+      this.emit("item/completed", {
+        threadId: "thread-results", turnId: "turn-results",
+        item: { type: "fileChange", changes: [{ path: "src/login.ts", added: 4, removed: 1 }] },
+      });
+      this.emit("item/completed", {
+        threadId: "thread-results", turnId: "turn-results",
+        item: { type: "agentMessage", phase: "final_answer", text: "login fixed; tests pass" },
+      });
+      this.emit("turn/completed", { threadId: "thread-results", turnId: "turn-results" });
+    });
+    return { turnId: "turn-results" };
+  }
+  async steer(): Promise<void> {}
+  async interrupt(): Promise<void> {}
+}
+
+class Transport implements TeamsTransport {
+  sent: string[] = [];
+  chatId(): string { return "self"; }
+  async readMessages(): Promise<TeamsMessage[]> { return []; }
+  async sendMessage(text: string): Promise<string> { this.sent.push(text); return `m${this.sent.length}`; }
+  async close(): Promise<void> {}
+}
+
+const pairing: Pairing = {
+  id: "self", tenant: "t", account: "me", chatId: "self", kind: "self",
+  allowlist: ["me"], projects: ["TeamBot"], createdAt: 1,
+};
+const message = (id: string): InboxMessage => ({
+  tenant: "t", chatId: "self", messageId: id, senderId: "me", text: "!tb run TeamBot fix login", receivedAt: 10,
+});
+
+test("coordinator folds Codex items into the task result and changed-file card", async () => {
+  const store = new Store();
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", name: "TeamBot", cwd: "D:/tb" });
+  const transport = new Transport();
+  const coord = new Coordinator({
+    store,
+    transport,
+    adapter: new StructuredAdapter() as unknown as CodexAdapter,
+    projects,
+    pairing,
+    now: () => 10,
+  });
+
+  const result = await coord.handle(message("m-results"));
+  assert.equal(result.action, "ran");
+  const job = store.getJob(result.jobId ?? "");
+  assert.ok(job);
+  assert.equal(job.status, "completed");
+  assert.deepEqual(job.changedFiles, ["src/login.ts"]);
+  assert.match(job.lastResult ?? "", /login fixed/);
+  assert.match(job.resultSummary ?? "", /1 檔變更/);
+  assert.deepEqual(store.listEvents(job.jobId).map((event) => event.kind), [
+    "turn/started", "item/started", "item/completed", "item/completed", "item/completed", "turn/completed",
+  ]);
+  assert.match(transport.sent.join("\n"), /login fixed/);
+  store.close();
+});

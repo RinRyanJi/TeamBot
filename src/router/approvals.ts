@@ -3,6 +3,7 @@
 // and single-use. Rejections (unknown/expired/used/wrong-conversation/not-authorized)
 // never mutate turn state — a bad approval attempt cannot affect the running work.
 import type { Store, Approval, Job } from "../storage/store.ts";
+import { randomBytes } from "node:crypto";
 
 export interface ApprovalContext {
   senderId: string;
@@ -106,11 +107,7 @@ export class ApprovalManager {
 }
 
 function defaultCodeGen(): () => string {
-  // Non-crypto short code A + base36; adequate as a lookup key (real security is
-  // the binding + expiry + one-time enforcement, not code secrecy).
-  let seed = 1;
-  return () => {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-    return "A" + seed.toString(36).toUpperCase().slice(0, 4).padStart(4, "0");
-  };
+  // The code is still bound to task/thread/turn/chat/sender, but an unpredictable
+  // value prevents concurrent approvals from being guessable in a shared tenant.
+  return () => `A${randomBytes(3).toString("hex").toUpperCase()}`;
 }
