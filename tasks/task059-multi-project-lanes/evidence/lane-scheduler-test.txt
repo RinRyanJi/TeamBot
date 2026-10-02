@@ -9,3 +9,8 @@ Evidence:
 - Fork and worktree identity are covered by the UC-04 fixture.
 
 Result: PASS.
+
+Runtime evidence:
+- `GitWorktreeRuntime` created and removed a real Git worktree in an isolated temporary repository.
+- Coordinator fork requires confirmation, records `merge-pending`, and uses a separate execution lane.
+- Coordinator maxConcurrent=2 test observed two different projects executing at the same time.

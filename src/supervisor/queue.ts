@@ -8,6 +8,8 @@ export interface QueueItem {
   jobId: string;
   chatId: string;
   projectId: string;
+  laneKey?: string;
+  worktreePath?: string;
 }
 
 export interface QueueSnapshotItem extends QueueItem {
@@ -24,6 +26,10 @@ export class JobQueue {
 
   constructor(maxConcurrent = 1) {
     this.maxConcurrent = Math.max(1, maxConcurrent);
+  }
+
+  private laneKey(item: QueueItem): string {
+    return item.laneKey ?? item.projectId;
   }
 
   /** Enqueue an item; returns its 1-based position among waiting items. */
@@ -63,7 +69,7 @@ export class JobQueue {
       position: index + 1,
       reason: (this.active.size >= this.maxConcurrent
         ? "capacity"
-        : this.lockedProjects.has(item.projectId)
+        : this.lockedProjects.has(this.laneKey(item))
           ? "project-busy"
           : "ready") as QueueSnapshotItem["reason"],
     }));
@@ -80,13 +86,13 @@ export class JobQueue {
   activateNext(): QueueItem | null {
     if (this.active.size >= this.maxConcurrent) return null;
     const idx = this.waiting.findIndex(
-      (w) => !this.lockedProjects.has(w.projectId),
+      (w) => !this.lockedProjects.has(this.laneKey(w)),
     );
     if (idx < 0) return null;
     const [item] = this.waiting.splice(idx, 1);
     if (!item) return null;
     this.active.set(item.jobId, item);
-    this.lockedProjects.add(item.projectId);
+    this.lockedProjects.add(this.laneKey(item));
     return item;
   }
 
@@ -95,7 +101,7 @@ export class JobQueue {
     const item = this.active.get(jobId);
     if (!item) return;
     this.active.delete(jobId);
-    this.lockedProjects.delete(item.projectId);
+    this.lockedProjects.delete(this.laneKey(item));
   }
 
   /** Remove a still-waiting job (e.g. cancelled before it ran). */

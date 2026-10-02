@@ -10,7 +10,9 @@ export const PREFIXES = ["!tb", "@tb"] as const;
 export const REPORT_PREFIX = "[TB";
 
 // ID naming (architecture §4): T=job, A=approval, Q=question. Case-insensitive.
-const JOB_ID = /^T\d+$/i;
+// Legacy sequential IDs remain accepted; v4 also accepts human task slugs such
+// as TB-API-7K2. The parser still rejects arbitrary text as a task selector.
+const JOB_ID = /^(?:T\d+|[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)+)$/i;
 const APPROVAL_ID = /^A[A-Z0-9]+$/i;
 const QUESTION_ID = /^Q[A-Z0-9]+$/i;
 
@@ -58,6 +60,15 @@ export function parseCommand(raw: string): ParseResult {
 
   const toks = tokens(text);
   const first = toks[0];
+  // Approval replies are intentionally allowed without the !tb prefix so a
+  // user can answer a pending card with the shortest safe mobile gesture.
+  const bareApproval = first?.toLowerCase();
+  if (bareApproval === "ok" || bareApproval === "no") {
+    const code = toks[1];
+    if (!code) return { ok: false, reason: "missing-args" };
+    if (!isApprovalId(code)) return { ok: false, reason: "bad-id" };
+    return { ok: true, command: { kind: bareApproval === "ok" ? "approve" : "deny", code } };
+  }
   if (!first || !PREFIXES.includes(first.toLowerCase() as (typeof PREFIXES)[number])) {
     return { ok: false, reason: "not-a-command" };
   }
@@ -116,6 +127,16 @@ export function parseCommand(raw: string): ParseResult {
       if (!code) return { ok: false, reason: "missing-args" };
       if (!isApprovalId(code)) return { ok: false, reason: "bad-id" };
       return { ok: true, command: { kind: sub, code } };
+    }
+
+    // Mobile-friendly approval aliases from PRD v4. These remain explicit
+    // commands so a bare "ok" can never approve an unrelated pending request.
+    case "ok":
+    case "no": {
+      const code = rest[0];
+      if (!code) return { ok: false, reason: "missing-args" };
+      if (!isApprovalId(code)) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: { kind: sub === "ok" ? "approve" : "deny", code } };
     }
 
     case "answer": {

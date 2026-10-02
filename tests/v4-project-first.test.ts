@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ProjectRegistry } from "../src/app/projects.ts";
 import { ConversationContextStore, resolveProject } from "../src/app/context.ts";
-import { formatOverview } from "../src/app/overview.ts";
+import { formatOverview, formatProjects } from "../src/app/overview.ts";
 import { parseV4Command } from "../src/router/v4-parser.ts";
 import { Store } from "../src/storage/store.ts";
 
@@ -19,8 +19,19 @@ test("v4 parser supports project-first controls and natural language", () => {
   assert.deepEqual(parseV4Command("!tb run Alpha fix login", ["Alpha"]), { ok: true, command: { kind: "run", projectId: "Alpha", request: "fix login" } });
   assert.deepEqual(parseV4Command("!tb run -- fix login"), { ok: true, command: { kind: "run", request: "fix login" } });
   assert.deepEqual(parseV4Command("!tb inspect the failing login"), { ok: true, command: { kind: "run", request: "inspect the failing login" } });
-  assert.deepEqual(parseV4Command("!tb task T004"), { ok: true, command: { kind: "task", jobId: "T004" } });
-  assert.deepEqual(parseV4Command("!tb fork T004 add tests"), { ok: true, command: { kind: "fork", jobId: "T004", request: "add tests" } });
+  assert.deepEqual(parseV4Command("!tb task T004"), { ok: true, command: { kind: "task", jobId: "T004", details: false } });
+  assert.deepEqual(parseV4Command("!tb task TB-API-7K2 details"), { ok: true, command: { kind: "task", jobId: "TB-API-7K2", details: true } });
+  assert.deepEqual(parseV4Command("!tb fork T004 add tests"), { ok: true, command: { kind: "fork", jobId: "T004", request: "add tests", confirmed: false } });
+  assert.deepEqual(parseV4Command("!tb fork T004 confirm add tests"), { ok: true, command: { kind: "fork", jobId: "T004", request: "add tests", confirmed: true } });
+  assert.deepEqual(parseV4Command("!tb stop T004"), { ok: true, command: { kind: "stop", jobId: "T004" } });
+  assert.deepEqual(parseV4Command("!tb steer T004 prioritize tests"), { ok: true, command: { kind: "steer", jobId: "T004", request: "prioritize tests" } });
+});
+
+test("project aliases and display names cannot collide across projects", () => {
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "A", name: "Frontend", aliases: ["web"], cwd: "D:/a" });
+  assert.throws(() => projects.register({ projectId: "B", name: "Backend", aliases: ["web"], cwd: "D:/b" }), /alias collision/);
+  assert.throws(() => projects.register({ projectId: "C", name: "Frontend", cwd: "D:/c" }), /alias collision/);
 });
 test("project resolution asks instead of guessing when several projects exist", () => {
   const projects = registry();
@@ -51,4 +62,12 @@ test("overview groups jobs by project and limits noise", () => {
   store.setConversationContext("self", "Beta", 5);
   assert.equal(store.getConversationContext("self").activeProjectId, "Beta");
   store.close();
+});
+
+test("projects card exposes a safe path tail and policy posture", () => {
+  const text = formatProjects(registry());
+  assert.match(text, /work\/alpha/);
+  assert.match(text, /default/);
+  assert.match(text, /aliases: frontend/);
+  assert.doesNotMatch(text, /D:\/work\/alpha\/\.env/);
 });

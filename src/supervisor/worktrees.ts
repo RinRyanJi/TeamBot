@@ -61,7 +61,7 @@ export class MultiTaskScheduler {
   startNext(): StartedTask | null {
     const item = this.queue.activateNext();
     if (!item) return null;
-    const worktree = this.allocator.allocate(item.jobId);
+    const worktree = item.worktreePath ?? this.allocator.allocate(item.jobId);
     return { item, worktree };
   }
 
@@ -69,6 +69,10 @@ export class MultiTaskScheduler {
   finish(jobId: string): void {
     this.allocator.release(jobId);
     this.queue.complete(jobId);
+  }
+
+  cancelWaiting(jobId: string): boolean {
+    return this.queue.removeWaiting(jobId);
   }
 
   get activeCount(): number {

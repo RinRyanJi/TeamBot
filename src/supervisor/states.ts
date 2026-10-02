@@ -19,7 +19,8 @@ export type JobStatus =
   | "failed"
   | "cancelled"
   | "interrupted"
-  | "unknown";
+  | "unknown"
+  | "merge-pending";
 
 const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
   queued: ["starting", "cancelled"],
@@ -32,6 +33,7 @@ const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
     "stopping",
     "interrupted",
     "unknown",
+    "merge-pending",
   ],
   waiting_input: ["running", "stopping", "failed", "interrupted", "unknown"],
   waiting_approval: ["running", "stopping", "failed", "interrupted", "unknown"],
@@ -40,6 +42,7 @@ const TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
   // After reconciliation an interrupted/unknown job resolves to a definite state.
   interrupted: ["running", "completed", "failed", "cancelled", "unknown"],
   unknown: ["running", "completed", "failed", "cancelled", "interrupted"],
+  "merge-pending": ["completed", "cancelled"],
   // Terminal.
   completed: [],
   failed: [],

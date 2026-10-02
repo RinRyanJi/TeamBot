@@ -26,6 +26,12 @@ export interface Job {
   cwd: string;
   threadId: string | null;
   activeTurnId: string | null;
+  title?: string;
+  executionMode?: "main" | "worktree";
+  worktreePath?: string | null;
+  queuePosition?: number | null;
+  currentStep?: string | null;
+  notificationPolicy?: "quiet" | "important" | "all-decisions";
   status: string;
   createdAt: number;
   lastEventAt: number | null;
@@ -123,6 +129,16 @@ export class Store {
     if (!pairingColumns.some((c) => c.name === "roles")) this.db.exec("ALTER TABLE pairings ADD COLUMN roles TEXT NOT NULL DEFAULT '{}'");
     const contextColumns = this.db.prepare("PRAGMA table_info(conversation_context)").all() as Array<{ name: string }>;
     if (!contextColumns.some((c) => c.name === "expiresAt")) this.db.exec("ALTER TABLE conversation_context ADD COLUMN expiresAt INTEGER NOT NULL DEFAULT 0");
+    const jobColumns = this.db.prepare("PRAGMA table_info(jobs)").all() as Array<{ name: string }>;
+    const jobDefaults: Array<[string, string]> = [
+      ["title", "TEXT NOT NULL DEFAULT ''"],
+      ["executionMode", "TEXT NOT NULL DEFAULT 'main'"],
+      ["worktreePath", "TEXT"],
+      ["queuePosition", "INTEGER"],
+      ["currentStep", "TEXT"],
+      ["notificationPolicy", "TEXT NOT NULL DEFAULT 'important'"],
+    ];
+    for (const [name, sql] of jobDefaults) if (!jobColumns.some((c) => c.name === name)) this.db.exec(`ALTER TABLE jobs ADD COLUMN ${name} ${sql}`);
     this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
   }
 
@@ -246,8 +262,8 @@ export class Store {
   ): void {
     this.db
       .prepare(
-        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,status,createdAt,lastEventAt,lastResult)
-         VALUES (?,?,?,?,?,?,?,?,?,NULL,NULL)`,
+        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,worktreePath,queuePosition,currentStep,notificationPolicy,status,createdAt,lastEventAt,lastResult)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
       )
       .run(
         j.jobId,
@@ -257,6 +273,12 @@ export class Store {
         j.cwd,
         j.threadId ?? null,
         j.activeTurnId ?? null,
+        j.title ?? "",
+        j.executionMode ?? "main",
+        j.worktreePath ?? null,
+        j.queuePosition ?? null,
+        j.currentStep ?? null,
+        j.notificationPolicy ?? "important",
         j.status,
         j.createdAt,
       );
@@ -275,6 +297,12 @@ export class Store {
       cwd: row.cwd as string,
       threadId: (row.threadId as string | null) ?? null,
       activeTurnId: (row.activeTurnId as string | null) ?? null,
+      title: (row.title as string | undefined) ?? "",
+      executionMode: ((row.executionMode as string | undefined) ?? "main") as Job["executionMode"],
+      worktreePath: (row.worktreePath as string | null) ?? null,
+      queuePosition: (row.queuePosition as number | null) ?? null,
+      currentStep: (row.currentStep as string | null) ?? null,
+      notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
       status: row.status as string,
       createdAt: row.createdAt as number,
       lastEventAt: (row.lastEventAt as number | null) ?? null,
@@ -301,6 +329,12 @@ export class Store {
       cwd: row.cwd as string,
       threadId: (row.threadId as string | null) ?? null,
       activeTurnId: (row.activeTurnId as string | null) ?? null,
+      title: (row.title as string | undefined) ?? "",
+      executionMode: ((row.executionMode as string | undefined) ?? "main") as Job["executionMode"],
+      worktreePath: (row.worktreePath as string | null) ?? null,
+      queuePosition: (row.queuePosition as number | null) ?? null,
+      currentStep: (row.currentStep as string | null) ?? null,
+      notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
       status: row.status as string,
       createdAt: row.createdAt as number,
       lastEventAt: (row.lastEventAt as number | null) ?? null,
@@ -320,6 +354,22 @@ export class Store {
     this.db
       .prepare("UPDATE jobs SET threadId=?, activeTurnId=? WHERE jobId=?")
       .run(threadId, activeTurnId ?? null, jobId);
+  }
+
+  updateJobMetadata(
+    jobId: string,
+    metadata: Partial<Pick<Job, "title" | "executionMode" | "worktreePath" | "queuePosition" | "currentStep" | "notificationPolicy">>,
+  ): void {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+    for (const [key, value] of Object.entries(metadata)) {
+      if (!['title', 'executionMode', 'worktreePath', 'queuePosition', 'currentStep', 'notificationPolicy'].includes(key)) continue;
+      fields.push(`${key}=?`);
+      values.push((value ?? null) as string | number | null);
+    }
+    if (fields.length === 0) return;
+    values.push(jobId);
+    this.db.prepare(`UPDATE jobs SET ${fields.join(", ")} WHERE jobId=?`).run(...values);
   }
 
   // --- events ---

@@ -30,6 +30,21 @@ export class ProjectRegistry {
       lanePolicy: def.lanePolicy ?? "single-active",
       notificationPolicy: def.notificationPolicy ?? "important",
     };
+
+    // A project name/alias is a user-facing routing key. Replacing an existing
+    // project is allowed only when the key belongs to that same project; a
+    // collision between two projects must be fixed at desktop setup time.
+    const keys = [projectId, normalized.name!, ...(normalized.aliases ?? [])];
+    for (const key of keys) {
+      const owner = this.aliases.get(key.toLowerCase());
+      if (owner && owner !== projectId) throw new Error(`project alias collision: ${key}`);
+    }
+    const previous = this.m.get(projectId);
+    if (previous) {
+      for (const key of [previous.projectId, previous.name ?? "", ...(previous.aliases ?? [])]) {
+        if (key) this.aliases.delete(key.toLowerCase());
+      }
+    }
     this.m.set(projectId, normalized);
     this.aliases.set(projectId.toLowerCase(), projectId);
     this.aliases.set(normalized.name!.toLowerCase(), projectId);

@@ -8,3 +8,7 @@ Evidence:
 - No ETA or percentage is fabricated when the state has no such evidence.
 
 Result: PASS (overview/status assertions included in the User Cases v4 fixture).
+
+Coordinator integration evidence:
+- Group overview filters jobs to the source conversation and keeps viewer commands read-only.
+- Task details include the most recent stored event kinds without exposing unrelated chats.

@@ -4,11 +4,14 @@ export type V4Command =
   | { kind: "overview" }
   | { kind: "focus"; projectId: string }
   | { kind: "run"; projectId?: string; request: string }
-  | { kind: "task"; jobId: string }
+  | { kind: "status"; jobId: string }
+  | { kind: "task"; jobId: string; details: boolean }
   | { kind: "add"; jobId?: string; request: string }
-  | { kind: "fork"; jobId: string; request: string }
+  | { kind: "fork"; jobId: string; request: string; confirmed: boolean }
   | { kind: "watch"; jobId: string; mode: "watch" | "mute" }
+  | { kind: "stop"; jobId: string }
   | { kind: "cancel"; jobId: string }
+  | { kind: "steer"; jobId: string; request: string }
   | { kind: "handoff"; jobId: string };
 
 export type V4ParseResult =
@@ -36,6 +39,13 @@ export function parseV4Command(raw: string, knownProjects: readonly string[] = [
     case "dashboard":
     case "?":
       return { ok: true, command: { kind: "overview" } };
+    case "status": {
+      if (!rest[0]) return { ok: true, command: { kind: "overview" } };
+      if (!isJobId(rest[0])) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: rest[1]?.toLowerCase() === "details"
+        ? { kind: "task", jobId: rest[0], details: true }
+        : { kind: "status", jobId: rest[0] } };
+    }
     case "focus": {
       const projectId = rest[0];
       return projectId ? { ok: true, command: { kind: "focus", projectId } } : { ok: false, reason: "missing-args" };
@@ -61,7 +71,7 @@ export function parseV4Command(raw: string, knownProjects: readonly string[] = [
       const jobId = rest[0];
       if (!jobId) return { ok: false, reason: "missing-args" };
       if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
-      return { ok: true, command: { kind: "task", jobId } };
+      return { ok: true, command: { kind: "task", jobId, details: rest[1]?.toLowerCase() === "details" } };
     }
     case "add": {
       const maybeJob = rest[0];
@@ -72,10 +82,11 @@ export function parseV4Command(raw: string, knownProjects: readonly string[] = [
     }
     case "fork": {
       const jobId = rest[0];
-      const request = rest.slice(1).join(" ").trim();
+      const confirmed = rest[1]?.toLowerCase() === "confirm";
+      const request = rest.slice(confirmed ? 2 : 1).join(" ").trim();
       if (!jobId || !request) return { ok: false, reason: "missing-args" };
       if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
-      return { ok: true, command: { kind: "fork", jobId, request } };
+      return { ok: true, command: { kind: "fork", jobId, request, confirmed } };
     }
     case "watch":
     case "mute": {
@@ -84,12 +95,24 @@ export function parseV4Command(raw: string, knownProjects: readonly string[] = [
       if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
       return { ok: true, command: { kind: "watch", jobId, mode: sub } };
     }
-    case "cancel":
     case "stop": {
       const jobId = rest[0];
       if (!jobId) return { ok: false, reason: "missing-args" };
       if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: { kind: "stop", jobId } };
+    }
+    case "cancel": {
+      const jobId = rest[0];
+      if (!jobId) return { ok: false, reason: "missing-args" };
+      if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
       return { ok: true, command: { kind: "cancel", jobId } };
+    }
+    case "steer": {
+      const jobId = rest[0];
+      const request = rest.slice(1).join(" ").trim();
+      if (!jobId || !request) return { ok: false, reason: "missing-args" };
+      if (!isJobId(jobId)) return { ok: false, reason: "bad-id" };
+      return { ok: true, command: { kind: "steer", jobId, request } };
     }
     case "handoff": {
       const jobId = rest[0];

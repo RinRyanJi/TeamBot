@@ -9,3 +9,7 @@ Evidence:
 - Store persists activeProjectId and expiresAt in conversation_context.
 
 Result: PASS (5 tests in the project-first fixture; typecheck also passes).
+
+Supplemental v4 verification:
+- Project alias/name collisions are rejected at registration time.
+- Mobile approval aliases `ok A2` and `no A2` remain explicit, one-time approval commands.

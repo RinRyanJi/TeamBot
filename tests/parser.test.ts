@@ -59,6 +59,18 @@ test("approve/deny take approval code; answer takes question id + text", () => {
   });
 });
 
+test("mobile approval aliases ok/no map to the same explicit approval commands", () => {
+  assert.deepEqual(parseCommand("ok A2"), {
+    ok: true,
+    command: { kind: "approve", code: "A2" },
+  });
+  assert.deepEqual(parseCommand("no A2"), {
+    ok: true,
+    command: { kind: "deny", code: "A2" },
+  });
+  assert.deepEqual(parseCommand("ok"), { ok: false, reason: "missing-args" });
+});
+
 test("both !tb and @tb prefixes are accepted", () => {
   assert.deepEqual(parseCommand("@tb help"), { ok: true, command: { kind: "help" } });
   assert.deepEqual(parseCommand("@tb run TeamBot go now"), {
