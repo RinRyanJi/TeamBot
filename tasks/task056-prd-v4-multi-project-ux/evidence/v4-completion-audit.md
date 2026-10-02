@@ -7,6 +7,7 @@ npm test
 npm run typecheck
 npm run build
 npm run harness:teams:v4
+node --experimental-strip-types --check scripts/e2e-v4-run.ts
 ```
 
 Observed evidence:
@@ -18,5 +19,6 @@ Observed evidence:
 - Different projects can run concurrently; the same main project lane remains serialized.
 - Fork confirmation creates a named `teambot/<taskId>` branch and reports `merge-pending`.
 - Dangerous group approvals route through a multi-chat transport to the owner self-chat and resolve once there.
+- `npm run run:v4` now wires the Electron-owned Teams surface, scoped self/group transports, project registry, Codex app-server and one central approval/input event router; startup refuses missing sender/project configuration.
 - `rename`, `diff`, `files`, `artifact`, `stop`, `kill`, `ok` and `no` have explicit parsers and authorization paths.
 - The live harness is non-sending by design. Real Teams tenant, phone and group evidence remains in task060 and requires a user-run disposable-chat session.

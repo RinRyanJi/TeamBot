@@ -36,6 +36,8 @@ export interface CoordinatorOptions {
   privateApprovalChatId?: string;
   /** Self-chat may accept a plain natural-language request when its project context is unique. */
   acceptNaturalLanguage?: boolean;
+  /** A shared adapter may install one central server-request router instead. */
+  listenServerRequests?: boolean;
 }
 
 export interface HandleResult {
@@ -90,7 +92,7 @@ export class Coordinator {
     this.privateApprovalChatId = opts.privateApprovalChatId;
     this.acceptNaturalLanguage = opts.acceptNaturalLanguage ?? true;
     const eventSource = this.adapter as unknown as { on?: (event: string, listener: (payload: unknown) => void) => void };
-    eventSource.on?.("serverRequest", (payload) => { void this.handleServerRequest(payload); });
+    if (opts.listenServerRequests !== false) eventSource.on?.("serverRequest", (payload) => { void this.handleServerRequest(payload); });
     this.inbox = new Inbox(this.store);
     this.outbox = new Outbox(this.store);
   }
@@ -561,7 +563,7 @@ export class Coordinator {
     return candidate;
   }
 
-  private async handleServerRequest(payload: unknown): Promise<void> {
+  async handleServerRequest(payload: unknown): Promise<void> {
     const request = payload as { id?: number; method?: string; params?: Record<string, unknown> };
     if (typeof request.id !== "number") return;
     const threadId = typeof request.params?.threadId === "string" ? request.params.threadId : undefined;

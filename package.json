@@ -13,6 +13,7 @@
     "test": "node --test --experimental-strip-types --experimental-sqlite --disable-warning=ExperimentalWarning \"tests/**/*.test.ts\" \"src/**/*.test.ts\"",
     "test:v4": "node --test --experimental-strip-types --experimental-sqlite --disable-warning=ExperimentalWarning tests/v4-project-first.test.ts tests/user-cases-v4.test.ts tests/multitask.test.ts",
     "harness:teams:v4": "node scripts/user-cases-v4-harness.mjs",
+    "run:v4": "node --experimental-strip-types --experimental-sqlite scripts/e2e-v4-run.ts",
     "gen:codex-schema": "node scripts/gen-codex-schema.mjs",
     "package:win": "node scripts/package-win.mjs",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""

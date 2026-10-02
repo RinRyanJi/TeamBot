@@ -50,3 +50,32 @@ export class RoutedTeamsTransport implements TeamsTransport {
     return route;
   }
 }
+
+/** Binds one app-owned Playwright adapter to a configured conversation. */
+export class ScopedTeamsTransport implements TeamsTransport {
+  private readonly adapter: TeamsTransport & { readMessagesFrom?: (chatId: string) => Promise<TeamsMessage[]> };
+  private readonly scopedChatId: string;
+  constructor(
+    adapter: TeamsTransport & { readMessagesFrom?: (chatId: string) => Promise<TeamsMessage[]> },
+    scopedChatId: string,
+  ) {
+    this.adapter = adapter;
+    this.scopedChatId = scopedChatId;
+  }
+
+  chatId(): string { return this.scopedChatId; }
+  readMessages(): Promise<TeamsMessage[]> {
+    if (this.adapter.readMessagesFrom) return this.adapter.readMessagesFrom(this.scopedChatId);
+    return this.adapter.readMessages();
+  }
+  sendMessage(text: string): Promise<string> {
+    if (this.adapter.sendMessageTo) return this.adapter.sendMessageTo(this.scopedChatId, text);
+    return this.adapter.sendMessage(text);
+  }
+  sendMessageTo(chatId: string, text: string): Promise<string> {
+    if (this.adapter.sendMessageTo) return this.adapter.sendMessageTo(chatId, text);
+    if (chatId !== this.scopedChatId) return Promise.reject(new Error(`transport cannot route chat ${chatId}`));
+    return this.adapter.sendMessage(text);
+  }
+  async close(): Promise<void> {}
+}

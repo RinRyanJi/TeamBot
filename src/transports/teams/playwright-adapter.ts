@@ -130,11 +130,10 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
    */
   async watchMessages(onMessage: (m: TeamsMessage) => void): Promise<void> {
     const page = this.requirePage();
-    const chatId = this.boundChatId;
     await page.exposeBinding(
       "__teambotPush",
       (_src, raw: { messageId: string; senderId: string; text: string }) => {
-        onMessage({ chatId, ...raw });
+        onMessage({ chatId: this.boundChatId, ...raw });
       },
     );
     const p = this.profile;
@@ -193,8 +192,49 @@ export class PlaywrightTeamsAdapter implements TeamsTransport {
     return raw.map((r) => ({ chatId, ...r }));
   }
 
+  /** Select a visible Teams conversation by its stable thread id. */
+  async selectChat(chatId: string): Promise<void> {
+    const page = this.requirePage();
+    if (this.boundChatId === chatId) return;
+    const p = this.profile;
+    const found = await page.$$eval(
+      p.chatIdSelector,
+      (elements, args) => {
+        const target = elements.find((element) => element.getAttribute(args.attr) === args.chatId) as unknown as { click(): void } | undefined;
+        if (!target) return false;
+        target.click();
+        return true;
+      },
+      { attr: p.chatIdAttr, chatId },
+    );
+    if (!found) throw new Error(`Teams chat ${chatId} is not visible in the app-owned surface`);
+    await page.waitForFunction(
+      ({ selector, attr, expected }) => {
+        const doc = (globalThis as unknown as { document: { querySelector(selector: string): { getAttribute(name: string): string | null } | null } }).document;
+        return doc.querySelector(selector)?.getAttribute(attr) === expected;
+      },
+      { selector: p.chatIdSelector, attr: p.chatIdAttr, expected: chatId },
+      { timeout: 10_000 },
+    );
+    this.boundChatId = chatId;
+  }
+
+  async readMessagesFrom(chatId: string): Promise<TeamsMessage[]> {
+    await this.selectChat(chatId);
+    return this.readMessages();
+  }
+
   sendMessage(text: string): Promise<string> {
     const task = this.writeChain.then(() => this.doSend(text));
+    this.writeChain = task.catch(() => undefined);
+    return task;
+  }
+
+  sendMessageTo(chatId: string, text: string): Promise<string> {
+    const task = this.writeChain.then(async () => {
+      await this.selectChat(chatId);
+      return this.doSend(text);
+    });
     this.writeChain = task.catch(() => undefined);
     return task;
   }

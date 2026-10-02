@@ -34,3 +34,20 @@ npm install
 npm run build
 npm run package:win   # 產生 release/ 下的 ZIP 產物
 ```
+
+## 啟動 v4 Teams runtime
+
+`run:v4` 會啟動自己的 Electron Teams WebContentsView，Playwright 只連到這個
+app-owned surface，再把 self-chat 與選定群組交給 project-first Coordinator。手機訊息
+不能提交 cwd；專案必須先由桌面設定以絕對路徑登記。
+
+```powershell
+$env:TEAMBOT_SELF_SENDER_ID = "<Teams sender id>"
+$env:TEAMBOT_PROJECTS_JSON = '[{"projectId":"TeamBot","cwd":"D:\\workspace\\GitBank\\GitRin\\TeamBot","aliases":["tb"]}]'
+$env:TEAMBOT_GROUP_CHAT_IDS = "<optional-group-thread-id>"
+npm run run:v4
+```
+
+必要的實際 Teams 驗證請使用 disposable self-chat/group；不要把 token、cookie、聊天匯出
+或截圖放進 Git。`TEAMBOT_GROUP_ROLES_JSON` 可用 `{ "<group-id>": { "<sender-id>": "owner" } }`
+指定 owner/operator/viewer。
