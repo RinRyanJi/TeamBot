@@ -16,7 +16,7 @@ Observed evidence:
 - 179 tests passed, including all 12 User Cases v4 fixtures, coordinator result folding, task detail summaries, and `completed_with_followup` for failed commands.
 - Project-first routing refuses ambiguous self-chat requests and accepts focused natural language.
 - Project profiles reject alias/name collisions, enforce conversation bindings, and expose safe display data.
-- Task records persist title, execution mode, branch/worktree, queue reason, decision state, files, artifacts, result summary and update time.
+- Task records persist title, execution mode, branch/worktree, queue reason, decision state, changed files, artifact rows (path/kind/hash/delivery state), result summary and update time; `artifact` lists those stored rows.
 - Different projects can run concurrently; the same main project lane remains serialized.
 - Fork confirmation creates a named `teambot/<taskId>` branch and reports `merge-pending`.
 - Dangerous group approvals route through a multi-chat transport to the owner self-chat and resolve once there.

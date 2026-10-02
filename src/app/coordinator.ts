@@ -64,6 +64,25 @@ function changeFiles(item: Record<string, unknown>): FileChange[] {
   return paths;
 }
 
+function artifactRecords(value: Record<string, unknown>): Array<{ path: string; kind: string; hash: string | null }> {
+  const records: Array<{ path: string; kind: string; hash: string | null }> = [];
+  const add = (candidate: unknown): void => {
+    const rec = recordOf(candidate);
+    // Keep artifact references local and display-safe; never persist a remote URI
+    // that could contain a signed URL or other credential-bearing query string.
+    const path = stringField(rec, "path", "filePath", "relativePath", "name");
+    if (!path) return;
+    const kind = stringField(rec, "kind", "type") ?? "file";
+    const hash = stringField(rec, "hash", "sha256", "checksum") ?? null;
+    records.push({ path, kind, hash });
+  };
+  add(value.artifact);
+  add(value.attachment);
+  const artifacts = value.artifacts;
+  if (Array.isArray(artifacts)) for (const artifact of artifacts) add(artifact);
+  return records;
+}
+
 export interface CoordinatorOptions {
   store: Store;
   transport: TeamsTransport;
@@ -377,10 +396,11 @@ export class Coordinator {
           await this.reply("sys", `找不到工作 ${command.jobId}`, msg.chatId);
           return { action: `${command.kind}:unknown` };
         }
+        const artifacts = command.kind === "artifact" ? this.store.listArtifacts(job.jobId) : [];
         const body = command.kind === "files"
           ? `檔案（${job.changedFiles?.length ?? 0}）：${job.changedFiles?.join(", ") || "(尚無)"}`
           : command.kind === "artifact"
-            ? `產物（${job.artifactCount ?? 0}）：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`
+            ? `產物（${artifacts.length}）：${artifacts.map((artifact) => `${artifact.path} · ${artifact.kind}`).join(", ") || (job.resultSummary ?? job.lastResult ?? "(尚無)")}`
             : `Diff 摘要：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`;
         await this.reply(job.jobId, body, msg.chatId);
         return { action: command.kind, jobId: job.jobId };
@@ -767,6 +787,7 @@ export class Coordinator {
     let turnStartedRecorded = true;
     const turnEvents: TurnEvent[] = [];
     let onTurn = (_p: unknown): void => undefined;
+    let onAttachment = (_p: unknown): void => undefined;
     const appendEvent = (kind: string, payload: unknown): void => {
       this.store.appendEvent(jobId, eventSeq++, kind, payload, this.now());
     };
@@ -778,6 +799,7 @@ export class Coordinator {
       this.adapter.off("turn/plan/updated", onPlan);
       this.adapter.off("turn/diff/updated", onDiff);
       this.adapter.off("thread/tokenUsage/updated", onTokens);
+      this.adapter.off("thread/attachment/updated", onAttachment);
       this.adapter.off("turn/completed", onTurn);
     };
     const onTurnStarted = (p: unknown): void => {
@@ -815,6 +837,9 @@ export class Coordinator {
         for (const file of files) turnEvents.push({ kind: "fileChange", ...file });
         if (files.length) this.store.updateJobMetadata(jobId, { changedFiles: files.map((file) => file.path) });
       }
+      for (const artifact of artifactRecords(item)) {
+        this.store.addArtifact({ jobId, ...artifact, createdAt: this.now() });
+      }
       appendEvent("item/completed", p);
     };
     const onCommandOutput = (p: unknown): void => {
@@ -849,6 +874,13 @@ export class Coordinator {
       if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
       appendEvent("thread/tokenUsage/updated", p);
     };
+    onAttachment = (p: unknown): void => {
+      if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
+      for (const artifact of artifactRecords(recordOf(p))) {
+        this.store.addArtifact({ jobId, ...artifact, createdAt: this.now() });
+      }
+      appendEvent("thread/attachment/updated", p);
+    };
     const completed = new Promise<void>((resolve) => {
       onTurn = (p: unknown): void => {
         if (!eventBelongs(p, thread.threadId, expectedTurnId)) return;
@@ -862,6 +894,7 @@ export class Coordinator {
       this.adapter.on("turn/plan/updated", onPlan);
       this.adapter.on("turn/diff/updated", onDiff);
       this.adapter.on("thread/tokenUsage/updated", onTokens);
+      this.adapter.on("thread/attachment/updated", onAttachment);
       this.adapter.on("turn/completed", onTurn);
     });
 

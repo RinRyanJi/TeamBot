@@ -62,6 +62,16 @@ export interface Approval {
   usedAt: number | null;
 }
 
+export interface Artifact {
+  id: number;
+  jobId: string;
+  path: string;
+  kind: string;
+  hash: string | null;
+  deliveryStatus: "pending" | "sent" | "unknown";
+  createdAt: number;
+}
+
 export interface InboxMessage {
   tenant: string;
   chatId: string;
@@ -446,6 +456,37 @@ export class Store {
     }));
   }
 
+  addArtifact(artifact: Omit<Artifact, "id" | "deliveryStatus"> & Partial<Pick<Artifact, "deliveryStatus">>): number {
+    const result = this.db.prepare(
+      `INSERT INTO artifacts (jobId,path,kind,hash,deliveryStatus,createdAt)
+       VALUES (?,?,?,?,?,?)
+       ON CONFLICT(jobId,path,kind) DO UPDATE SET hash=excluded.hash`,
+    ).run(
+      artifact.jobId,
+      artifact.path,
+      artifact.kind,
+      artifact.hash ?? null,
+      artifact.deliveryStatus ?? "pending",
+      artifact.createdAt,
+    );
+    const row = this.db.prepare("SELECT id FROM artifacts WHERE jobId=? AND path=? AND kind=?").get(artifact.jobId, artifact.path, artifact.kind) as { id: number };
+    this.db.prepare("UPDATE jobs SET artifactCount=(SELECT COUNT(*) FROM artifacts WHERE jobId=?), updatedAt=? WHERE jobId=?").run(artifact.jobId, artifact.createdAt, artifact.jobId);
+    return Number(row.id ?? result.lastInsertRowid);
+  }
+
+  listArtifacts(jobId: string): Artifact[] {
+    const rows = this.db.prepare("SELECT * FROM artifacts WHERE jobId=? ORDER BY id").all(jobId) as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      id: row.id as number,
+      jobId: row.jobId as string,
+      path: row.path as string,
+      kind: row.kind as string,
+      hash: (row.hash as string | null) ?? null,
+      deliveryStatus: ((row.deliveryStatus as string | undefined) ?? "pending") as Artifact["deliveryStatus"],
+      createdAt: row.createdAt as number,
+    }));
+  }
+
   // --- approvals ---
   createApproval(a: Approval): void {
     this.db
@@ -634,17 +675,18 @@ export class Store {
   }
 
   // --- retention / deletion (architecture §8) ---
-  count(table: "pairings" | "jobs" | "events" | "approvals" | "inbox" | "outbox"): number {
+  count(table: "pairings" | "jobs" | "events" | "artifacts" | "approvals" | "inbox" | "outbox"): number {
     const row = this.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {
       n: number;
     };
     return row.n;
   }
 
-  /** Delete a job and everything attached to it (events, approvals, outbox). */
+  /** Delete a job and everything attached to it (events, artifacts, approvals, outbox). */
   deleteJob(jobId: string): void {
     this.transaction(() => {
       this.db.prepare("DELETE FROM events WHERE jobId=?").run(jobId);
+      this.db.prepare("DELETE FROM artifacts WHERE jobId=?").run(jobId);
       this.db.prepare("DELETE FROM approvals WHERE jobId=?").run(jobId);
       this.db.prepare("DELETE FROM outbox WHERE jobId=?").run(jobId);
       this.db.prepare("DELETE FROM jobs WHERE jobId=?").run(jobId);
@@ -661,6 +703,7 @@ export class Store {
       ).map((r) => r.jobId);
       for (const jobId of jobIds) {
         this.db.prepare("DELETE FROM events WHERE jobId=?").run(jobId);
+        this.db.prepare("DELETE FROM artifacts WHERE jobId=?").run(jobId);
       }
       this.db.prepare("DELETE FROM jobs WHERE chatId=?").run(chatId);
       this.db.prepare("DELETE FROM approvals WHERE chatId=?").run(chatId);
@@ -686,6 +729,7 @@ export class Store {
         ).map((r) => r.jobId);
         for (const jobId of jobIds) {
           this.db.prepare("DELETE FROM events WHERE jobId=?").run(jobId);
+          this.db.prepare("DELETE FROM artifacts WHERE jobId=?").run(jobId);
           this.db.prepare("DELETE FROM approvals WHERE jobId=?").run(jobId);
           this.db.prepare("DELETE FROM outbox WHERE jobId=?").run(jobId);
         }

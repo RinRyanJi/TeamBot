@@ -25,6 +25,14 @@ class StructuredAdapter extends EventEmitter {
       });
       this.emit("item/completed", {
         threadId: "thread-results", turnId: "turn-results",
+        item: { type: "artifact", artifact: { path: "reports/login.md", kind: "report", sha256: "abc123" } },
+      });
+      this.emit("thread/attachment/updated", {
+        threadId: "thread-results", turnId: "turn-results",
+        attachment: { path: "logs/test-output.txt", kind: "log", hash: "def456" },
+      });
+      this.emit("item/completed", {
+        threadId: "thread-results", turnId: "turn-results",
         item: { type: "agentMessage", phase: "final_answer", text: "login fixed; tests pass" },
       });
       this.emit("turn/completed", { threadId: "thread-results", turnId: "turn-results" });
@@ -71,13 +79,20 @@ test("coordinator folds Codex items into the task result and changed-file card",
   assert.ok(job);
   assert.equal(job.status, "completed");
   assert.deepEqual(job.changedFiles, ["src/login.ts"]);
+  assert.equal(job.artifactCount, 2);
+  assert.deepEqual(store.listArtifacts(job.jobId).map((artifact) => [artifact.path, artifact.kind, artifact.hash]), [
+    ["reports/login.md", "report", "abc123"],
+    ["logs/test-output.txt", "log", "def456"],
+  ]);
   assert.match(job.lastResult ?? "", /login fixed/);
   assert.match(job.resultSummary ?? "", /1 檔變更/);
   assert.deepEqual(store.listEvents(job.jobId).map((event) => event.kind), [
-    "turn/started", "item/started", "item/completed", "item/completed", "item/completed", "turn/completed",
+    "turn/started", "item/started", "item/completed", "item/completed", "item/completed", "thread/attachment/updated", "item/completed", "turn/completed",
   ]);
   assert.match(transport.sent.join("\n"), /login fixed/);
   assert.match(transport.sent.join("\n"), /Project：TeamBot · Task：T001 · 已完成/);
+  await coord.handle({ ...message("m-artifact"), text: "!tb artifact T001" });
+  assert.match(transport.sent.at(-1) ?? "", /reports\/login\.md · report/);
   store.close();
 });
 

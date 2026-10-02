@@ -9,6 +9,7 @@ const day = 24 * 60 * 60 * 1000;
 function seedJob(s: Store, jobId: string, createdAt: number): void {
   s.createJob({ jobId, chatId: "c1", senderId: "u", projectId: "P", cwd: "/p", status: "completed", createdAt });
   s.appendEvent(jobId, 1, "turn/completed", null, createdAt);
+  s.addArtifact({ jobId, path: "reports/result.md", kind: "report", hash: "abc", createdAt });
   s.createApproval({
     code: `AC-${jobId}`, jobId, requestId: "r", threadId: null, turnId: null, scope: null,
     userId: "u", chatId: "c1", status: "approved", createdAt, expiresAt: createdAt + 1000, usedAt: createdAt,
@@ -21,11 +22,13 @@ test("deleteJob removes the job and all attached rows", () => {
   seedJob(s, "T1", now);
   assert.equal(s.count("jobs"), 1);
   assert.equal(s.count("events"), 1);
+  assert.equal(s.count("artifacts"), 1);
   assert.equal(s.count("approvals"), 1);
   assert.equal(s.count("outbox"), 1);
   s.deleteJob("T1");
   assert.equal(s.count("jobs"), 0);
   assert.equal(s.count("events"), 0);
+  assert.equal(s.count("artifacts"), 0);
   assert.equal(s.count("approvals"), 0);
   assert.equal(s.count("outbox"), 0);
   s.close();
@@ -39,6 +42,7 @@ test("deleteConversation removes all data for a chat", () => {
   s.deleteConversation("c1");
   assert.equal(s.count("jobs"), 0);
   assert.equal(s.count("events"), 0);
+  assert.equal(s.count("artifacts"), 0);
   assert.equal(s.count("approvals"), 0);
   assert.equal(s.count("inbox"), 0);
   assert.equal(s.count("outbox"), 0);
@@ -62,6 +66,7 @@ test("purgeExpired removes rows older than TTL, keeps fresh ones", () => {
   assert.equal(s.getJob("OLD"), undefined, "old job gone");
   // Old job's children cascaded away; fresh job's remain.
   assert.equal(s.count("events"), 1);
+  assert.equal(s.count("artifacts"), 1);
   assert.equal(s.count("inbox"), 1);
   s.close();
 });

@@ -58,6 +58,17 @@ CREATE TABLE IF NOT EXISTS events (
   UNIQUE (jobId, seq)
 );
 
+CREATE TABLE IF NOT EXISTS artifacts (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  jobId           TEXT NOT NULL,
+  path            TEXT NOT NULL,
+  kind            TEXT NOT NULL DEFAULT 'file',
+  hash            TEXT,
+  deliveryStatus  TEXT NOT NULL DEFAULT 'pending',
+  createdAt       INTEGER NOT NULL,
+  UNIQUE (jobId, path, kind)
+);
+
 CREATE TABLE IF NOT EXISTS approvals (
   code          TEXT PRIMARY KEY,
   jobId         TEXT NOT NULL,
