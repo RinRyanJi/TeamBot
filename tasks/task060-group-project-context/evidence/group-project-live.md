@@ -16,4 +16,6 @@ execute these steps from the phone:
 
 Record the date, tenant alias (never tokens/cookies), chat labels, observed replies, and screenshots outside Git. Paste the redacted observations below and change Status to LIVE-VERIFIED after review.
 
+Read-only preflight observed 2026-10-03: the isolated Electron Teams session was already authenticated (`authenticated:true`, URL `https://teams.cloud.microsoft/`), but no target chat was open, so stable chat/message/sender IDs were not available. No message was sent and the live acceptance steps were not claimed.
+
 Status: PENDING USER-RUN
