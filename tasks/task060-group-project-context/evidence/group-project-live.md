@@ -2,7 +2,10 @@
 
 Automated tests cover the local role and persistence policy in `tests/user-cases-v4.test.ts` (UC-08). Real tenant/phone verification is intentionally not performed by the agent because it would send messages to a user's Teams account.
 
-Run the desktop app with a disposable test pairing and then execute these steps from the phone:
+Run the desktop app with a disposable test pairing. First use the local console's
+「登記／編輯專案」 form to register the projects used by the test (for example
+`TeamBot` and `CodexWeb`), restart the runtime so it loads `projects.json`, and then
+execute these steps from the phone:
 
 1. In the selected group, send `!tb projects`; confirm only the configured project list is shown.
 2. As a viewer, send `!tb run TeamBot list files`; confirm the request is denied and no Codex turn starts.
