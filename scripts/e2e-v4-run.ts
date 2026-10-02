@@ -100,6 +100,7 @@ async function main(): Promise<void> {
   // lower-level `interrupted` marker for compatibility with older stores, then
   // promote it before any Teams recovery notice is sent.
   for (const jobId of recovery.interruptedJobs) {
+    store.updateJobMetadata(jobId, { executionStatus: "execution_unknown" });
     store.updateJobStatus(jobId, "needs_reconciliation", "Codex process was lost; confirm before continuing");
   }
 

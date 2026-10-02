@@ -39,6 +39,7 @@ export interface Job {
   resultSummary?: string | null;
   notificationPolicy?: "quiet" | "important" | "all-decisions";
   deliveryStatus?: "online" | "delivery_degraded";
+  executionStatus?: "known" | "execution_unknown";
   status: string;
   createdAt: number;
   updatedAt?: number;
@@ -152,6 +153,7 @@ export class Store {
       ["resultSummary", "TEXT"],
       ["notificationPolicy", "TEXT NOT NULL DEFAULT 'important'"],
       ["deliveryStatus", "TEXT NOT NULL DEFAULT 'online'"],
+      ["executionStatus", "TEXT NOT NULL DEFAULT 'known'"],
       ["updatedAt", "INTEGER NOT NULL DEFAULT 0"],
     ];
     for (const [name, sql] of jobDefaults) if (!jobColumns.some((c) => c.name === name)) this.db.exec(`ALTER TABLE jobs ADD COLUMN ${name} ${sql}`);
@@ -278,8 +280,8 @@ export class Store {
   ): void {
     this.db
       .prepare(
-        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,branchName,worktreePath,queuePosition,queueReason,currentStep,pendingDecision,changedFiles,artifactCount,resultSummary,notificationPolicy,deliveryStatus,status,createdAt,updatedAt,lastEventAt,lastResult)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
+        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,branchName,worktreePath,queuePosition,queueReason,currentStep,pendingDecision,changedFiles,artifactCount,resultSummary,notificationPolicy,deliveryStatus,executionStatus,status,createdAt,updatedAt,lastEventAt,lastResult)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
       )
       .run(
         j.jobId,
@@ -302,6 +304,7 @@ export class Store {
         j.resultSummary ?? null,
         j.notificationPolicy ?? "important",
         j.deliveryStatus ?? "online",
+        j.executionStatus ?? "known",
         j.status,
         j.createdAt,
         j.updatedAt ?? j.createdAt,
@@ -334,6 +337,7 @@ export class Store {
       resultSummary: (row.resultSummary as string | null) ?? null,
       notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
       deliveryStatus: ((row.deliveryStatus as string | undefined) ?? "online") as Job["deliveryStatus"],
+      executionStatus: ((row.executionStatus as string | undefined) ?? "known") as Job["executionStatus"],
       status: row.status as string,
       createdAt: row.createdAt as number,
       updatedAt: (row.updatedAt as number | undefined) ?? (row.createdAt as number),
@@ -374,6 +378,7 @@ export class Store {
       resultSummary: (row.resultSummary as string | null) ?? null,
       notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
       deliveryStatus: ((row.deliveryStatus as string | undefined) ?? "online") as Job["deliveryStatus"],
+      executionStatus: ((row.executionStatus as string | undefined) ?? "known") as Job["executionStatus"],
       status: row.status as string,
       createdAt: row.createdAt as number,
       updatedAt: (row.updatedAt as number | undefined) ?? (row.createdAt as number),
@@ -398,12 +403,12 @@ export class Store {
 
   updateJobMetadata(
     jobId: string,
-    metadata: Partial<Pick<Job, "title" | "executionMode" | "branchName" | "worktreePath" | "queuePosition" | "queueReason" | "currentStep" | "pendingDecision" | "changedFiles" | "artifactCount" | "resultSummary" | "notificationPolicy" | "deliveryStatus">>,
+    metadata: Partial<Pick<Job, "title" | "executionMode" | "branchName" | "worktreePath" | "queuePosition" | "queueReason" | "currentStep" | "pendingDecision" | "changedFiles" | "artifactCount" | "resultSummary" | "notificationPolicy" | "deliveryStatus" | "executionStatus">>,
   ): void {
     const fields: string[] = [];
     const values: Array<string | number | null> = [];
     for (const [key, value] of Object.entries(metadata)) {
-      if (!['title', 'executionMode', 'branchName', 'worktreePath', 'queuePosition', 'queueReason', 'currentStep', 'pendingDecision', 'changedFiles', 'artifactCount', 'resultSummary', 'notificationPolicy', 'deliveryStatus'].includes(key)) continue;
+      if (!['title', 'executionMode', 'branchName', 'worktreePath', 'queuePosition', 'queueReason', 'currentStep', 'pendingDecision', 'changedFiles', 'artifactCount', 'resultSummary', 'notificationPolicy', 'deliveryStatus', 'executionStatus'].includes(key)) continue;
       fields.push(`${key}=?`);
       values.push((key === 'changedFiles' ? JSON.stringify(value ?? []) : (value ?? null)) as string | number | null);
     }

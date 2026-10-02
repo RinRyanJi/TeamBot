@@ -723,7 +723,9 @@ export class Coordinator {
         .then(req.resolve)
         .catch(async (error: unknown) => {
           const detail = error instanceof Error ? error.message : "未知執行錯誤";
-          this.store.updateJobStatus(started.item.jobId, "failed", detail);
+          const executionUnknown = /process|exit|disconnect|transport/i.test(detail);
+          if (executionUnknown) this.store.updateJobMetadata(started.item.jobId, { executionStatus: "execution_unknown" });
+          this.store.updateJobStatus(started.item.jobId, executionUnknown ? "execution_unknown" : "failed", detail);
           await this.reply(started.item.jobId, `執行失敗：${detail}`, req.msg.chatId);
           req.resolve({ action: "failed", jobId: started.item.jobId });
         })
@@ -749,7 +751,7 @@ export class Coordinator {
     if (!cwd) throw new Error(`project disappeared: ${projectId}`);
     // Drive the Codex turn to completion.
     this.store.updateJobStatus(jobId, "starting");
-    this.store.updateJobMetadata(jobId, { currentStep: "starting thread" });
+    this.store.updateJobMetadata(jobId, { currentStep: "starting thread", executionStatus: "known" });
     const thread = (await this.adapter.startThread({ cwd })) as {
       threadId: string;
     };
@@ -896,6 +898,7 @@ export class Coordinator {
       resultSummary: safeSummary || safeFinalText || null,
       changedFiles: result.files.map((file) => file.path),
       pendingDecision: null,
+      executionStatus: "known",
     });
     const projectName = this.projects.get(projectId)?.name ?? projectId;
     const stateLabel = wasCancelled

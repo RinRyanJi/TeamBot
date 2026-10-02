@@ -48,7 +48,8 @@ export function formatOverview(jobs: Job[], projects: ProjectRegistry, maxJobs =
       const queue = job.queuePosition ? ` · queue #${job.queuePosition}${job.queueReason ? ` (${job.queueReason})` : ""}` : "";
       const step = job.currentStep ? ` · ${job.currentStep}` : "";
       const delivery = job.deliveryStatus === "delivery_degraded" ? " · delivery_degraded" : "";
-      lines.push(`  ${job.jobId} · ${job.status}${mode}${queue}${step}${delivery}${job.lastResult ? ` · ${job.lastResult.slice(0, 120)}` : ""}`);
+      const execution = job.executionStatus === "execution_unknown" ? " · execution_unknown" : "";
+      lines.push(`  ${job.jobId} · ${job.status}${mode}${queue}${step}${delivery}${execution}${job.lastResult ? ` · ${job.lastResult.slice(0, 120)}` : ""}`);
       remaining -= 1;
     }
   }
@@ -66,7 +67,7 @@ export function formatTask(job: Job, projectName = job.projectId): string {
     `待處理：${job.pendingDecision ?? "(無)"} · 檔案：${job.changedFiles?.length ?? 0} · 產物：${job.artifactCount ?? 0}`,
     `來源聊天：${job.chatId}`,
     `Codex thread：${job.threadId ?? "尚未建立"}`,
-    `最近事件：${job.lastEventAt ?? "-"} · 更新：${job.updatedAt ?? "-"}${job.deliveryStatus === "delivery_degraded" ? " · delivery_degraded" : ""}`,
+    `最近事件：${job.lastEventAt ?? "-"} · 更新：${job.updatedAt ?? "-"}${job.deliveryStatus === "delivery_degraded" ? " · delivery_degraded" : ""}${job.executionStatus === "execution_unknown" ? " · execution_unknown" : ""}`,
     `結果：${job.resultSummary ?? job.lastResult ?? "(尚無)"}`,
   ].join("\n");
 }

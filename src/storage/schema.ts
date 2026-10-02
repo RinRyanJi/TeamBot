@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   resultSummary TEXT,
   notificationPolicy TEXT NOT NULL DEFAULT 'important',
   deliveryStatus TEXT NOT NULL DEFAULT 'online',
+  executionStatus TEXT NOT NULL DEFAULT 'known',
   status        TEXT NOT NULL,
   createdAt     INTEGER NOT NULL,
   updatedAt     INTEGER NOT NULL,

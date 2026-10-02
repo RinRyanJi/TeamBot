@@ -79,6 +79,8 @@ test("in-flight jobs are marked 'unknown' on restart, not re-run", () => {
   const reconciled = markProcessLossUnknown(s);
   assert.deepEqual(reconciled.map((r) => r.jobId).sort(), ["T1", "T2"]);
   assert.equal(s.getJob("T1")?.status, "unknown");
+  s.updateJobMetadata("T1", { executionStatus: "execution_unknown" });
+  assert.equal(s.getJob("T1")?.executionStatus, "execution_unknown");
   assert.equal(s.getJob("T2")?.status, "unknown");
   assert.equal(s.getJob("T3")?.status, "completed", "terminal jobs untouched");
   s.close();
