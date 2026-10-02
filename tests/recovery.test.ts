@@ -86,6 +86,7 @@ test("in-flight jobs are marked 'unknown' on restart, not re-run", () => {
 
 test("offline result is retained in outbox and reconciled on reconnect", async () => {
   const s = new Store();
+  s.createJob({ jobId: "T1", chatId: "c1", senderId: "u", projectId: "P", cwd: "/p", status: "completed", createdAt: at });
   // A completed job produced a reply while Teams was offline.
   s.enqueueOutbox({ jobId: "T1", chatId: "c1", seq: 1, part: 1, body: "[TB T1] done", createdAt: at });
   assert.equal(s.listPendingOutbox("c1").length, 1);
@@ -96,6 +97,7 @@ test("offline result is retained in outbox and reconciled on reconnect", async (
   const r1 = await reconcileOutbox(s, transport, () => at);
   assert.equal(r1.sent, 0);
   assert.equal(transport.sent.length, 0);
+  assert.equal(s.getJob("T1")?.deliveryStatus, "delivery_degraded");
 
   // Reconnect and reconcile: pending/uncertain flushed successfully.
   transport.online = true;
@@ -105,6 +107,7 @@ test("offline result is retained in outbox and reconciled on reconnect", async (
   assert.equal(r2.sent, 1);
   assert.ok(transport.sent.some((x) => x.includes("[TB T1] done")));
   assert.equal(s.listPendingOutbox("c1").length, 0);
+  assert.equal(s.getJob("T1")?.deliveryStatus, "online");
   s.close();
 });
 

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   artifactCount INTEGER NOT NULL DEFAULT 0,
   resultSummary TEXT,
   notificationPolicy TEXT NOT NULL DEFAULT 'important',
+  deliveryStatus TEXT NOT NULL DEFAULT 'online',
   status        TEXT NOT NULL,
   createdAt     INTEGER NOT NULL,
   updatedAt     INTEGER NOT NULL,

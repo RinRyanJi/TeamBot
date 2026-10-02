@@ -927,9 +927,11 @@ export class Coordinator {
         if (chatId !== this.transport.chatId()) await routed.sendMessageTo!(chatId, row.body);
         else await this.transport.sendMessage(row.body);
         this.outbox.markSent(row.id, this.now());
+        if (jobId !== "sys" && this.store.getJob(jobId)) this.store.updateJobMetadata(jobId, { deliveryStatus: "online" });
       } catch {
         // Send outcome uncertain: retain for reconciliation, don't blindly resend.
         this.outbox.markUnknown(row.id);
+        if (jobId !== "sys" && this.store.getJob(jobId)) this.store.updateJobMetadata(jobId, { deliveryStatus: "delivery_degraded" });
       }
     }
   }

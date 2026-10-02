@@ -38,6 +38,7 @@ export interface Job {
   artifactCount?: number;
   resultSummary?: string | null;
   notificationPolicy?: "quiet" | "important" | "all-decisions";
+  deliveryStatus?: "online" | "delivery_degraded";
   status: string;
   createdAt: number;
   updatedAt?: number;
@@ -130,8 +131,8 @@ export class Store {
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA foreign_keys = ON;");
     this.db.exec(SCHEMA_SQL);
-    // Existing v2 databases predate group roles. Keep the schema version
-    // stable and add the nullable-compatible column in place.
+    // Existing v2 databases predate group roles and delivery visibility. Keep
+    // the schema version stable and add nullable-compatible columns in place.
     const pairingColumns = this.db.prepare("PRAGMA table_info(pairings)").all() as Array<{ name: string }>;
     if (!pairingColumns.some((c) => c.name === "roles")) this.db.exec("ALTER TABLE pairings ADD COLUMN roles TEXT NOT NULL DEFAULT '{}'");
     const contextColumns = this.db.prepare("PRAGMA table_info(conversation_context)").all() as Array<{ name: string }>;
@@ -150,6 +151,7 @@ export class Store {
       ["artifactCount", "INTEGER NOT NULL DEFAULT 0"],
       ["resultSummary", "TEXT"],
       ["notificationPolicy", "TEXT NOT NULL DEFAULT 'important'"],
+      ["deliveryStatus", "TEXT NOT NULL DEFAULT 'online'"],
       ["updatedAt", "INTEGER NOT NULL DEFAULT 0"],
     ];
     for (const [name, sql] of jobDefaults) if (!jobColumns.some((c) => c.name === name)) this.db.exec(`ALTER TABLE jobs ADD COLUMN ${name} ${sql}`);
@@ -276,8 +278,8 @@ export class Store {
   ): void {
     this.db
       .prepare(
-        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,branchName,worktreePath,queuePosition,queueReason,currentStep,pendingDecision,changedFiles,artifactCount,resultSummary,notificationPolicy,status,createdAt,updatedAt,lastEventAt,lastResult)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
+        `INSERT INTO jobs (jobId,chatId,senderId,projectId,cwd,threadId,activeTurnId,title,executionMode,branchName,worktreePath,queuePosition,queueReason,currentStep,pendingDecision,changedFiles,artifactCount,resultSummary,notificationPolicy,deliveryStatus,status,createdAt,updatedAt,lastEventAt,lastResult)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL)`,
       )
       .run(
         j.jobId,
@@ -299,6 +301,7 @@ export class Store {
         j.artifactCount ?? 0,
         j.resultSummary ?? null,
         j.notificationPolicy ?? "important",
+        j.deliveryStatus ?? "online",
         j.status,
         j.createdAt,
         j.updatedAt ?? j.createdAt,
@@ -330,6 +333,7 @@ export class Store {
       artifactCount: Number(row.artifactCount ?? 0),
       resultSummary: (row.resultSummary as string | null) ?? null,
       notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
+      deliveryStatus: ((row.deliveryStatus as string | undefined) ?? "online") as Job["deliveryStatus"],
       status: row.status as string,
       createdAt: row.createdAt as number,
       updatedAt: (row.updatedAt as number | undefined) ?? (row.createdAt as number),
@@ -369,6 +373,7 @@ export class Store {
       artifactCount: Number(row.artifactCount ?? 0),
       resultSummary: (row.resultSummary as string | null) ?? null,
       notificationPolicy: ((row.notificationPolicy as string | undefined) ?? "important") as Job["notificationPolicy"],
+      deliveryStatus: ((row.deliveryStatus as string | undefined) ?? "online") as Job["deliveryStatus"],
       status: row.status as string,
       createdAt: row.createdAt as number,
       updatedAt: (row.updatedAt as number | undefined) ?? (row.createdAt as number),
@@ -393,12 +398,12 @@ export class Store {
 
   updateJobMetadata(
     jobId: string,
-    metadata: Partial<Pick<Job, "title" | "executionMode" | "branchName" | "worktreePath" | "queuePosition" | "queueReason" | "currentStep" | "pendingDecision" | "changedFiles" | "artifactCount" | "resultSummary" | "notificationPolicy">>,
+    metadata: Partial<Pick<Job, "title" | "executionMode" | "branchName" | "worktreePath" | "queuePosition" | "queueReason" | "currentStep" | "pendingDecision" | "changedFiles" | "artifactCount" | "resultSummary" | "notificationPolicy" | "deliveryStatus">>,
   ): void {
     const fields: string[] = [];
     const values: Array<string | number | null> = [];
     for (const [key, value] of Object.entries(metadata)) {
-      if (!['title', 'executionMode', 'branchName', 'worktreePath', 'queuePosition', 'queueReason', 'currentStep', 'pendingDecision', 'changedFiles', 'artifactCount', 'resultSummary', 'notificationPolicy'].includes(key)) continue;
+      if (!['title', 'executionMode', 'branchName', 'worktreePath', 'queuePosition', 'queueReason', 'currentStep', 'pendingDecision', 'changedFiles', 'artifactCount', 'resultSummary', 'notificationPolicy', 'deliveryStatus'].includes(key)) continue;
       fields.push(`${key}=?`);
       values.push((key === 'changedFiles' ? JSON.stringify(value ?? []) : (value ?? null)) as string | number | null);
     }

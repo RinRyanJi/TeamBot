@@ -60,9 +60,11 @@ export async function reconcileOutbox(
       if (row.chatId !== transport.chatId()) await transport.sendMessageTo!(row.chatId, row.body);
       else await transport.sendMessage(row.body);
       store.setOutboxStatus(row.id, "sent", now());
+      if (row.jobId) store.updateJobMetadata(row.jobId, { deliveryStatus: "online" });
       sent += 1;
     } catch {
       store.setOutboxStatus(row.id, "unknown");
+      if (row.jobId) store.updateJobMetadata(row.jobId, { deliveryStatus: "delivery_degraded" });
       uncertain += 1;
     }
   }
