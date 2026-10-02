@@ -73,6 +73,36 @@ test("group task and diff views stay summary-only", async () => {
   store.close();
 });
 
+test("group coordinator rejects a message from another conversation", async () => {
+  const store = new Store();
+  store.createJob({ jobId: "T-ISOLATED", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", status: "running", createdAt: 1 });
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", name: "TeamBot", cwd: "D:/tb" });
+  const pairing: Pairing = { id: "g", tenant: "t", account: "owner", chatId: "group", kind: "group", allowlist: ["operator", "viewer"], roles: { operator: "operator", viewer: "viewer" }, projects: ["TeamBot"], createdAt: 1 };
+  const transport = new Transport("group");
+  const coord = new Coordinator({ store, transport, adapter: {} as CodexAdapter, projects, pairing, now: () => 10 });
+  const result = await coord.handle(msg("cross-chat", "viewer", "!tb task T-ISOLATED", "other-group"));
+  assert.equal(result.action, "ignored:wrong-conversation");
+  assert.equal(transport.sent.length, 0);
+  store.close();
+});
+
+test("group overview exposes recovery state with project and task identity", async () => {
+  const store = new Store();
+  store.createJob({ jobId: "T-RECOVER", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", status: "needs_reconciliation", executionStatus: "execution_unknown", createdAt: 1 });
+  const projects = new ProjectRegistry();
+  projects.register({ projectId: "TeamBot", name: "TeamBot", cwd: "D:/tb" });
+  const pairing: Pairing = { id: "g", tenant: "t", account: "owner", chatId: "group", kind: "group", allowlist: ["operator", "viewer"], roles: { operator: "operator", viewer: "viewer" }, projects: ["TeamBot"], createdAt: 1 };
+  const transport = new Transport("group");
+  const coord = new Coordinator({ store, transport, adapter: {} as CodexAdapter, projects, pairing, now: () => 10 });
+  const result = await coord.handle(msg("recovery-overview", "viewer", "!tb overview"));
+  assert.equal(result.action, "overview");
+  assert.match(transport.sent.at(-1) ?? "", /TeamBot/);
+  assert.match(transport.sent.at(-1) ?? "", /T-RECOVER/);
+  assert.match(transport.sent.at(-1) ?? "", /needs_reconciliation|execution_unknown/);
+  store.close();
+});
+
 test("group viewer cannot hard-kill Codex and operator leaves reconciliation state", async () => {
   const store = new Store();
   store.createJob({ jobId: "T-KILL", chatId: "group", senderId: "operator", projectId: "TeamBot", cwd: "D:/tb", threadId: "th-kill", activeTurnId: "turn-kill", status: "running", createdAt: 1 });

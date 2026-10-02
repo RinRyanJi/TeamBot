@@ -15,7 +15,7 @@ The current run is recorded in [local-verification-2026-10-03.txt](local-verific
 
 Observed evidence:
 
-- 186 tests passed, including the 49-test v4 suite with all 12 User Cases v4 fixtures, coordinator result folding, task detail summaries, and `completed_with_followup` for failed commands.
+- 188 tests passed, including the 51-test v4 suite with all 12 User Cases v4 fixtures, coordinator result folding, task detail summaries, group source binding, recovery visibility, and `completed_with_followup` for failed commands.
 - Project-first routing refuses ambiguous self-chat requests and accepts focused natural language.
 - Project profiles reject alias/name collisions, enforce conversation bindings, and expose safe display data.
 - Desktop onboarding now provides a local registration/edit/remove form with absolute-path validation and an atomic user-data `projects.json`; the runtime can load that file without putting paths in shell history.
@@ -35,4 +35,5 @@ Observed evidence:
 - Recovery statuses include `execution_unknown` and `needs_reconciliation` in the lifecycle transition model.
 - `rename`, `diff`, `files`, `artifact`, `stop`, `kill`, `ok` and `no` have explicit parsers and authorization paths.
 - A group viewer cannot invoke the legacy `!tb kill` control; an authorized hard stop records `execution_unknown` plus `needs_reconciliation` instead of presenting an ordinary failure.
+- Coordinator entrypoints reject messages whose tenant or chat ID does not match the configured pairing, and group overview keeps recovery task/project identity visible.
 - The live harness is non-sending by design. Real Teams tenant, phone and group evidence remains in task060 and requires a user-run disposable-chat session.

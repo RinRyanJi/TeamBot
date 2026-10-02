@@ -166,6 +166,12 @@ export class Coordinator {
   }
 
   async handle(msg: InboxMessage): Promise<HandleResult> {
+    // The runtime normally selects a Coordinator from (tenant, chatId), but
+    // keep the source binding at this boundary as well. A misrouted message
+    // must never be able to query or mutate a different conversation's jobs.
+    if (msg.tenant !== this.pairing.tenant || msg.chatId !== this.pairing.chatId) {
+      return { action: "ignored:wrong-conversation" };
+    }
     const decision = this.inbox.intake(msg, this.pairing);
     if (!decision.accepted) return { action: `ignored:${decision.reason}` };
 
