@@ -101,7 +101,7 @@
 | Teams 離線但工作完成 | 結果保留 outbox，恢復後核對並傳送 |
 | 桌面與手機同時送出要求 | 同一工作只有一個寫入順序 |
 
-## 建議目錄（尚未建立程式）
+## 歷史建議目錄（已由現行程式分層實現）
 
 ```text
 launcher/             Electron main、preload、renderer（畫面併入此處）
@@ -117,7 +117,7 @@ tests/                fixture、協定測試、整合測試
 docs/                 架構、操作與來源移植紀錄
 ```
 
-倉庫目前已存在的空資料夾 `src/`、`scripts/`、`tests/`、`ui/` 僅為 placeholder，尚未被 Git 追蹤（不在 `git ls-files` 內）。實作時依上表重整：`ui/` 的畫面併入 `launcher/` 的 renderer，`src/` 展開為上列子目錄；需要保留的空目錄以 `.gitkeep` 追蹤，避免計畫目錄與實際結構不一致。
+上表保留原始拆分構想；現行程式已在 `launcher/`、`src/`、`scripts/`、`tests/` 與 `docs/` 建立對應模組。`ui/` 的畫面由 Electron desktop console 管理，Teams WebContentsView 與 Codex supervisor 維持隔離。
 
 ## Git 工作方式
 

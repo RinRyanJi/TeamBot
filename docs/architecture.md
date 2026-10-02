@@ -1,6 +1,6 @@
 # TeamBot 架構提案
 
-日期：2026-09-23。狀態：設計草案，尚未進入產品實作。
+日期：2026-09-23。狀態：v4 實作基準；本機能力已實作並驗證，真實 Teams 租戶／手機行為仍以 live evidence 為準。
 
 已確認需求：同一帳號在「與自己聊天」發送指令，以及在指定群組聊天操作，兩者都納入首版。
 
@@ -271,12 +271,12 @@ Teams 失聯與 Codex 執行狀態分開記錄。已啟動且不需新批准的�
 
 不整包搬入 ChatGPT Responses bridge、模型目錄、tunnel 與 HITL harness；它們解決的是模型供應與工具橋接，與本案手機控制入口不同。
 
-移植時記錄上游 commit、來源檔案與修改內容，保留其 MIT 版權／授權文字，形成 TeamBot 自己可維護的 source code；不依賴旁邊專案才能執行。目前只做架構參考，尚未複製上游程式。
+移植時記錄上游 commit、來源檔案與修改內容，保留其 MIT 版權／授權文字，形成 TeamBot 自己可維護的 source code；不依賴旁邊專案才能執行。目前 TeamBot 已建立獨立 Electron、Teams adapter、Codex supervisor、storage 與測試程式；相鄰專案仍只作為瀏覽器生命週期參考，未被執行期依賴。
 
-## 12. 尚待決定
+## 12. 目前後續與限制
 
 1. 首版是否接受 TeamBot 管理的 Codex 工作階段；若要求原始 TUI 操作，PTY 模式需升為主要範圍。
 2. 首批允許專案、指定群組、成員與批准權限及保留紀錄期限，在桌面配對設定時指定。
 3. 是否接受 §10 的 Teams 條款與帳號風險並以瀏覽器自動化為方案；否則於 Phase 0 後轉向官方 Teams 傳輸或縮減範圍。
 
-以上是設計決策，不是開始實作的暗示。先確認產品方向，再按驗收計畫推進。
+目前後續只包括 task060 的真實 Teams 群組／手機驗證，以及依 live evidence 決定是否需要每個聊天各自的背景 WebContentsView 或改用官方 Teams 傳輸。其他 v4 本機驗收以 `npm test`、`npm run test:v4`、typecheck、build 和 evidence 文件為準。
