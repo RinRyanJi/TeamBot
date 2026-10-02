@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS pairings (
   chatId        TEXT NOT NULL,
   kind          TEXT NOT NULL CHECK (kind IN ('self','group')),
   allowlist     TEXT NOT NULL DEFAULT '[]',   -- JSON array of sender ids
+  roles         TEXT NOT NULL DEFAULT '{}',   -- sender id -> owner/operator/viewer
   projects      TEXT NOT NULL DEFAULT '[]',   -- JSON array of project ids
   baselineMessageId TEXT,
   baselineAt    INTEGER,                       -- messages at/before this are history, not executed
@@ -86,6 +87,15 @@ CREATE TABLE IF NOT EXISTS session (
   key           TEXT PRIMARY KEY,           -- e.g. residentThreadId
   value         TEXT NOT NULL,
   at            INTEGER NOT NULL
+);
+
+-- Project focus is conversation-scoped. It is deliberately separate from
+-- pairings so clearing a pairing does not silently change task history.
+CREATE TABLE IF NOT EXISTS conversation_context (
+  chatId        TEXT PRIMARY KEY,
+  activeProjectId TEXT,
+  updatedAt     INTEGER NOT NULL,
+  expiresAt     INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sent_results (

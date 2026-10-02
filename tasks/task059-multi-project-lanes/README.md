@@ -2,7 +2,7 @@
 
 - Phase: P1
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,4 @@ Tests prove different-project scheduling, same-project serialization, explicit f
 
 ## Result
 
-_Fill in when complete._
+Completed. Queue snapshots expose capacity/project-busy reasons and the scheduler preserves per-project locks while allocating distinct worktree paths for isolated lanes. See [lane-scheduler-test.txt](evidence/lane-scheduler-test.txt).

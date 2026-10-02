@@ -1,0 +1,10 @@
+Command:
+  node --test --experimental-strip-types --experimental-sqlite --disable-warning=ExperimentalWarning tests/v4-project-first.test.ts tests/user-cases-v4.test.ts
+
+Evidence:
+- formatOverview groups running/waiting/completed jobs under project display names.
+- formatTask includes task ID, project, status, source chat, Codex thread and result.
+- Overview is generated from Store state and does not start a Codex turn.
+- No ETA or percentage is fabricated when the state has no such evidence.
+
+Result: PASS (overview/status assertions included in the User Cases v4 fixture).

@@ -10,6 +10,12 @@ export interface QueueItem {
   projectId: string;
 }
 
+export interface QueueSnapshotItem extends QueueItem {
+  state: "queued" | "active";
+  position: number;
+  reason: "capacity" | "project-busy" | "ready";
+}
+
 export class JobQueue {
   private waiting: QueueItem[] = [];
   private active = new Map<string, QueueItem>();
@@ -37,6 +43,31 @@ export class JobQueue {
   }
   get activeCount(): number {
     return this.active.size;
+  }
+
+  get maxCapacity(): number {
+    return this.maxConcurrent;
+  }
+
+  /** A user-facing snapshot explaining why each queued item is waiting. */
+  snapshot(): QueueSnapshotItem[] {
+    const active = [...this.active.values()].map((item) => ({
+      ...item,
+      state: "active" as const,
+      position: 0,
+      reason: "ready" as const,
+    }));
+    const queued = this.waiting.map((item, index) => ({
+      ...item,
+      state: "queued" as const,
+      position: index + 1,
+      reason: (this.active.size >= this.maxConcurrent
+        ? "capacity"
+        : this.lockedProjects.has(item.projectId)
+          ? "project-busy"
+          : "ready") as QueueSnapshotItem["reason"],
+    }));
+    return [...active, ...queued];
   }
   isActive(jobId: string): boolean {
     return this.active.has(jobId);

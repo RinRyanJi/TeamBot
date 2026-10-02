@@ -2,7 +2,7 @@
 
 - Phase: P0
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,4 @@ Tests prove registered project selection, alias collision rejection, context exp
 
 ## Result
 
-_Fill in when complete._
+Completed. `ProjectRegistry`, `ConversationContextStore`, persistent Store context, v4 parsing, and coordinator focus/run resolution now enforce registered project IDs, per-chat focus, ambiguity prompts, and a 30-minute expiry. See [project-context-test.txt](evidence/project-context-test.txt).

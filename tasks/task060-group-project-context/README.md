@@ -18,4 +18,4 @@ User-run live evidence covers group project selection, unauthorized member denia
 
 ## Result
 
-_Fill in when complete._
+Local policy and persistence tests are complete. Live tenant/phone revalidation remains pending and must be run with the supplied harness; no real Teams messages were sent by automated verification. See [group-project-live.md](evidence/group-project-live.md).

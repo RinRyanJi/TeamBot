@@ -74,6 +74,14 @@ export class MultiTaskScheduler {
   get activeCount(): number {
     return this.queue.activeCount;
   }
+
+  get maxCapacity(): number {
+    return this.queue.maxCapacity;
+  }
+
+  queueSnapshot() {
+    return this.queue.snapshot();
+  }
   worktreeFor(jobId: string): string | undefined {
     return this.allocator.pathFor(jobId);
   }

@@ -2,7 +2,7 @@
 
 - Phase: P0
 - Env: local (fully verifiable here)
-- Status: pending
+- Status: DONE
 
 ## Spec
 
@@ -18,4 +18,4 @@ Fixture tests render one-screen overview, task details, action-required states, 
 
 ## Result
 
-_Fill in when complete._
+Completed. Overview and task-card reducers group jobs by project, show actionable state, and avoid invented ETA/percentage fields. See [overview-status-test.txt](evidence/overview-status-test.txt).

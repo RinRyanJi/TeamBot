@@ -11,6 +11,7 @@ export interface Pairing {
   chatId: string;
   kind: "self" | "group";
   allowlist: string[];
+  roles?: Record<string, "owner" | "operator" | "viewer">;
   projects: string[];
   baselineMessageId?: string | null;
   baselineAt?: number | null;
@@ -116,6 +117,12 @@ export class Store {
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA foreign_keys = ON;");
     this.db.exec(SCHEMA_SQL);
+    // Existing v2 databases predate group roles. Keep the schema version
+    // stable and add the nullable-compatible column in place.
+    const pairingColumns = this.db.prepare("PRAGMA table_info(pairings)").all() as Array<{ name: string }>;
+    if (!pairingColumns.some((c) => c.name === "roles")) this.db.exec("ALTER TABLE pairings ADD COLUMN roles TEXT NOT NULL DEFAULT '{}'");
+    const contextColumns = this.db.prepare("PRAGMA table_info(conversation_context)").all() as Array<{ name: string }>;
+    if (!contextColumns.some((c) => c.name === "expiresAt")) this.db.exec("ALTER TABLE conversation_context ADD COLUMN expiresAt INTEGER NOT NULL DEFAULT 0");
     this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
   }
 
@@ -161,11 +168,11 @@ export class Store {
   upsertPairing(p: Pairing): void {
     this.db
       .prepare(
-        `INSERT INTO pairings (id,tenant,account,chatId,kind,allowlist,projects,baselineMessageId,baselineAt,createdAt)
-         VALUES (?,?,?,?,?,?,?,?,?,?)
+        `INSERT INTO pairings (id,tenant,account,chatId,kind,allowlist,roles,projects,baselineMessageId,baselineAt,createdAt)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(tenant,chatId) DO UPDATE SET
            account=excluded.account, kind=excluded.kind, allowlist=excluded.allowlist,
-           projects=excluded.projects, baselineMessageId=excluded.baselineMessageId,
+           roles=excluded.roles, projects=excluded.projects, baselineMessageId=excluded.baselineMessageId,
            baselineAt=excluded.baselineAt`,
       )
       .run(
@@ -175,6 +182,7 @@ export class Store {
         p.chatId,
         p.kind,
         JSON.stringify(p.allowlist),
+        JSON.stringify(p.roles ?? {}),
         JSON.stringify(p.projects),
         p.baselineMessageId ?? null,
         p.baselineAt ?? null,
@@ -194,6 +202,7 @@ export class Store {
       chatId: row.chatId as string,
       kind: row.kind as "self" | "group",
       allowlist: JSON.parse(row.allowlist as string) as string[],
+      roles: JSON.parse((row.roles as string | undefined) ?? "{}") as Pairing["roles"],
       projects: JSON.parse(row.projects as string) as string[],
       baselineMessageId: (row.baselineMessageId as string | null) ?? null,
       baselineAt: (row.baselineAt as number | null) ?? null,
@@ -278,6 +287,25 @@ export class Store {
       .prepare("SELECT jobId FROM jobs ORDER BY createdAt")
       .all() as Array<{ jobId: string }>;
     return rows.map((r) => r.jobId);
+  }
+
+  listJobs(chatId?: string): Job[] {
+    const rows = (chatId
+      ? this.db.prepare("SELECT * FROM jobs WHERE chatId=? ORDER BY createdAt").all(chatId)
+      : this.db.prepare("SELECT * FROM jobs ORDER BY createdAt").all()) as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      jobId: row.jobId as string,
+      chatId: row.chatId as string,
+      senderId: row.senderId as string,
+      projectId: row.projectId as string,
+      cwd: row.cwd as string,
+      threadId: (row.threadId as string | null) ?? null,
+      activeTurnId: (row.activeTurnId as string | null) ?? null,
+      status: row.status as string,
+      createdAt: row.createdAt as number,
+      lastEventAt: (row.lastEventAt as number | null) ?? null,
+      lastResult: (row.lastResult as string | null) ?? null,
+    }));
   }
 
   updateJobStatus(jobId: string, status: string, lastResult?: string): void {
@@ -453,6 +481,23 @@ export class Store {
       | { value: string }
       | undefined;
     return row?.value;
+  }
+
+  setConversationContext(chatId: string, activeProjectId: string | null, at: number, expiresAt = activeProjectId ? at + 30 * 60 * 1000 : 0): void {
+    this.db.prepare(
+      `INSERT INTO conversation_context (chatId,activeProjectId,updatedAt,expiresAt) VALUES (?,?,?,?)
+       ON CONFLICT(chatId) DO UPDATE SET activeProjectId=excluded.activeProjectId, updatedAt=excluded.updatedAt, expiresAt=excluded.expiresAt`,
+    ).run(chatId, activeProjectId, at, expiresAt);
+  }
+
+  getConversationContext(chatId: string): { chatId: string; activeProjectId: string | null; updatedAt: number; expiresAt: number } {
+    const row = this.db.prepare("SELECT * FROM conversation_context WHERE chatId=?").get(chatId) as Record<string, unknown> | undefined;
+    return {
+      chatId,
+      activeProjectId: (row?.activeProjectId as string | null) ?? null,
+      updatedAt: (row?.updatedAt as number | undefined) ?? 0,
+      expiresAt: (row?.expiresAt as number | undefined) ?? 0,
+    };
   }
 
   listPendingApprovals(): Approval[] {

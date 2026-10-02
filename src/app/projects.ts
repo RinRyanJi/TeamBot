@@ -1,23 +1,59 @@
-// Project registry (architecture §8). The desktop registers project aliases with
-// normalized absolute paths; the phone can only name a registered alias, never
-// submit an arbitrary cwd.
+// Project registry (PRD v4 §5). The desktop registers project aliases with
+// normalized absolute paths; the phone can only name a registered project,
+// never submit an arbitrary cwd.
 export interface ProjectDef {
   projectId: string;
   cwd: string;
+  /** Friendly name shown in the mobile overview. */
+  name?: string;
+  /** Additional names accepted by the command parser. */
+  aliases?: string[];
+  repository?: string;
+  defaultBranch?: string;
+  executionPolicy?: "read-only" | "workspace-write" | "danger-full-access";
+  lanePolicy?: "single-active" | "worktree-fork";
+  notificationPolicy?: "quiet" | "important" | "all-decisions";
 }
 
 export class ProjectRegistry {
   private m = new Map<string, ProjectDef>();
+  private aliases = new Map<string, string>();
+
   register(def: ProjectDef): void {
-    this.m.set(def.projectId, def);
+    const projectId = def.projectId.trim();
+    if (!projectId) throw new Error("projectId is required");
+    const normalized: ProjectDef = {
+      ...def,
+      projectId,
+      name: def.name?.trim() || projectId,
+      aliases: [...new Set((def.aliases ?? []).map((a) => a.trim()).filter(Boolean))],
+      lanePolicy: def.lanePolicy ?? "single-active",
+      notificationPolicy: def.notificationPolicy ?? "important",
+    };
+    this.m.set(projectId, normalized);
+    this.aliases.set(projectId.toLowerCase(), projectId);
+    this.aliases.set(normalized.name!.toLowerCase(), projectId);
+    for (const alias of normalized.aliases ?? []) this.aliases.set(alias.toLowerCase(), projectId);
   }
+
   get(projectId: string): ProjectDef | undefined {
-    return this.m.get(projectId);
+    const canonical = this.aliases.get(projectId.trim().toLowerCase()) ?? projectId;
+    return this.m.get(canonical);
   }
+
+  resolve(projectIdOrAlias: string): ProjectDef | undefined {
+    return this.get(projectIdOrAlias);
+  }
+
   has(projectId: string): boolean {
-    return this.m.has(projectId);
+    return this.get(projectId) !== undefined;
   }
+
   list(): string[] {
     return [...this.m.keys()];
+  }
+
+  all(): ProjectDef[] {
+    return [...this.m.values()];
   }
 }

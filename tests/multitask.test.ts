@@ -47,3 +47,14 @@ test("same project never runs concurrently even above the cap", () => {
   s.finish("A");
   assert.equal(s.startNext()?.item.jobId, "B");
 });
+
+test("queue snapshot explains capacity and project-busy waits", () => {
+  const scheduler = new MultiTaskScheduler("D:/tb", 2);
+  scheduler.submit({ jobId: "T1", chatId: "c", projectId: "A" });
+  scheduler.submit({ jobId: "T2", chatId: "c", projectId: "A" });
+  scheduler.submit({ jobId: "T3", chatId: "c", projectId: "B" });
+  assert.ok(scheduler.startNext());
+  const snapshot = scheduler.queueSnapshot();
+  assert.equal(snapshot.find((x) => x.jobId === "T2")?.reason, "project-busy");
+  assert.equal(snapshot.find((x) => x.jobId === "T3")?.reason, "ready");
+});

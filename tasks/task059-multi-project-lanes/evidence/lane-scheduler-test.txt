@@ -1,0 +1,11 @@
+Command:
+  node --test --experimental-strip-types --experimental-sqlite --disable-warning=ExperimentalWarning tests/multitask.test.ts tests/user-cases-v4.test.ts
+
+Evidence:
+- Different projects can activate concurrently up to maxConcurrent.
+- Same-project jobs remain serialized by a project lock.
+- Isolated starts receive unique .worktrees/<jobId> paths.
+- queueSnapshot reports active/queued state and capacity/project-busy reasons.
+- Fork and worktree identity are covered by the UC-04 fixture.
+
+Result: PASS.

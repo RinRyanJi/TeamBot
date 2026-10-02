@@ -1,0 +1,11 @@
+Command:
+  node --test --experimental-strip-types --experimental-sqlite --disable-warning=ExperimentalWarning tests/v4-project-first.test.ts
+
+Evidence:
+- v4 parser accepts overview/focus/run/task/fork and natural-language requests.
+- Alias resolution never accepts a cwd; unknown explicit projects are refused.
+- Multiple registered projects return an ambiguity result instead of guessing.
+- A focused project is restored per chat and expires after the configured TTL.
+- Store persists activeProjectId and expiresAt in conversation_context.
+
+Result: PASS (5 tests in the project-first fixture; typecheck also passes).
