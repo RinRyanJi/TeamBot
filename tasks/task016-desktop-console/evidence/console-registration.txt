@@ -4,6 +4,7 @@ Local checks:
 
 - `node --check launcher/electron/console-main.cjs` — passed.
 - `node --check launcher/electron/console-preload.cjs` — passed.
+- `npm run check:projects` — setup-time validator added; it prints only safe project display fields and refuses malformed or missing profiles.
 - Project config tests — 2/2 passed (absolute-path and alias collision rejection; atomic save/load from a user-data path).
 - Full `npm test` — 184/184 passed.
 - `npx electron launcher/electron/console-main.cjs --smoke` — exit 0; `hasRegistrationForm:true`, `projectCount:0`, tray minimize and drain checks passed.

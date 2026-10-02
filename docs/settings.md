@@ -67,6 +67,12 @@ $env:TEAMBOT_PROJECTS_FILE = "$env:LOCALAPPDATA\TeamBot\projects.json"
 npm run run:v4
 ```
 
+若只想先驗證設定檔，不啟動 Teams 或 Codex，可執行：
+
+```powershell
+npm run check:projects
+```
+
 必要的實際 Teams 驗證請使用 disposable self-chat/group；不要把 token、cookie、聊天匯出
 或截圖放進 Git。`TEAMBOT_GROUP_ROLES_JSON` 可用 `{ "<group-id>": { "<sender-id>": "owner" } }`
 指定 owner/operator/viewer。
